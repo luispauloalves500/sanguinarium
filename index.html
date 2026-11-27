@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a0000">
+<title>SANGUINARIUM — Pacto de Sangue</title>
+<link rel="stylesheet" href="./style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="flash"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="side p1">
+      <div class="portrait" id="por1">V</div>
+      <div class="bars">
+        <div class="name"><span id="name1">VARKHAN</span><span class="pips" id="pips1"></span></div>
+        <div class="hp"><div class="lag" id="lag1"></div><div class="fill" id="hp1"></div></div>
+        <div class="pct" id="pct1">100%</div>
+      </div>
+    </div>
+    <div class="timer" id="timer">99</div>
+    <div class="side p2">
+      <div class="bars">
+        <div class="name"><span class="pips" id="pips2"></span><span id="name2">LILITH</span></div>
+        <div class="hp"><div class="lag" id="lag2"></div><div class="fill" id="hp2"></div></div>
+        <div class="pct" id="pct2">100%</div>
+      </div>
+      <div class="portrait" id="por2">L</div>
+    </div>
+  </div>
+  <div class="hud-bottom">
+    <div class="meters p1"><div class="segs" id="seg1"><i></i><i></i><i></i></div><div class="fury"><div id="fury1"></div><span>FÚRIA</span></div></div>
+    <div class="meters p2"><div class="segs" id="seg2"><i></i><i></i><i></i></div><div class="fury"><div id="fury2"></div><span>FÚRIA</span></div></div>
+  </div>
+  <div class="combo c1" id="combo1"></div>
+  <div class="combo c2" id="combo2"></div>
+  <div id="announce"></div>
+  <div id="msg"></div>
+  <button id="pauseBtn" class="pause-btn" aria-label="Pausar">II</button>
+</div>
+
+<div id="touch" class="hidden">
+  <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
+  <div class="tbtns">
+    <button data-b="lp">SR</button><button data-b="hp">SF</button><button data-b="special" class="esp">ESP</button>
+    <button data-b="lk">CR</button><button data-b="hk">CF</button><button data-b="grab">AGR</button>
+    <button data-b="block" class="def">DEF</button><button data-b="dodge">ESQ</button>
+  </div>
+</div>
+
+<div id="screens">
+  <section id="scr-title" class="screen">
+    <div class="logo"><h1>SANGUINARIUM</h1><h2>PACTO DE SANGUE</h2></div>
+    <p class="blink">Toque ou pressione ENTER para começar</p>
+    <p class="age">Conteúdo adulto (18+): violência intensa e sangue.</p>
+  </section>
+  <section id="scr-main" class="screen hidden">
+    <div class="logo small"><h1>SANGUINARIUM</h1><h2>PACTO DE SANGUE</h2></div>
+    <nav class="menu" id="mainMenu">
+      <button data-act="cpu">1 Jogador vs CPU</button>
+      <button data-act="versus">2 Jogadores (local)</button>
+      <button data-act="training">Treinamento</button>
+      <button data-act="moves">Lista de Golpes</button>
+      <button data-act="options">Opções</button>
+      <button data-act="credits">Créditos</button>
+    </nav>
+    <p class="hint">W/S ou ↑/↓ navegam · J ou Enter confirmam</p>
+  </section>
+  <section id="scr-select" class="screen hidden">
+    <h3 class="title">ESCOLHA SEU LUTADOR</h3>
+    <div class="select-wrap">
+      <div class="pick" id="pick1"></div>
+      <div class="pick" id="pick2"></div>
+    </div>
+    <div class="row" id="diffRow"><span>Dificuldade da CPU:</span><button id="diffPrev">◀</button><b id="diffName">Normal</b><button id="diffNext">▶</button></div>
+    <div class="row"><button class="back" data-back="main">Voltar</button></div>
+    <p class="hint">P1: A/D escolhe, J confirma · P2: ←/→ escolhe, Num1/Insert confirma · Toque nos cartões</p>
+  </section>
+  <section id="scr-arena" class="screen hidden">
+    <h3 class="title">ESCOLHA A ARENA</h3>
+    <div class="arenas" id="arenaList"></div>
+    <div class="row"><button class="back" data-back="select">Voltar</button></div>
+  </section>
+  <section id="scr-options" class="screen hidden panel">
+    <h3 class="title">OPÇÕES</h3>
+    <div class="opts" id="optList"></div>
+    <div class="row"><button class="back" data-back="main">Voltar</button></div>
+  </section>
+  <section id="scr-moves" class="screen hidden panel">
+    <h3 class="title">LISTA DE GOLPES</h3>
+    <div class="tabs"><button data-ch="varkhan" class="on">Varkhan</button><button data-ch="lilith">Lilith</button><button data-ch="controls">Controles</button></div>
+    <div class="moves" id="moveList"></div>
+    <div class="row"><button class="back" data-back="prev">Voltar</button></div>
+  </section>
+  <section id="scr-credits" class="screen hidden panel">
+    <h3 class="title">CRÉDITOS</h3>
+    <div class="credits">
+      <p><b>SANGUINARIUM — Pacto de Sangue</b><br>Primeira versão jogável (v0.1.0)</p>
+      <p>Design: GDD v1.0 de Luis Paulo Alves</p>
+      <p>Universo, personagens, sons e trilha originais. Inspirado no gênero de luta 2.5D; nenhum recurso proprietário de outras franquias foi utilizado.</p>
+      <p>Motor 3D: Three.js (MIT). Modelos, texturas, efeitos e áudio gerados proceduralmente.</p>
+    </div>
+    <div class="row"><button class="back" data-back="main">Voltar</button></div>
+  </section>
+  <section id="scr-pause" class="screen hidden dim">
+    <h3 class="title">PAUSA</h3>
+    <nav class="menu" id="pauseMenu">
+      <button data-act="resume">Continuar</button>
+      <button data-act="restart">Reiniciar</button>
+      <button data-act="moves">Lista de Golpes</button>
+      <button data-act="quit">Sair para o menu</button>
+    </nav>
+  </section>
+  <section id="scr-results" class="screen hidden dim">
+    <h3 class="title" id="resTitle">VITÓRIA</h3>
+    <p id="resSub" class="sub"></p>
+    <div id="resStats" class="stats"></div>
+    <nav class="menu" id="resultMenu">
+      <button data-act="rematch">Revanche</button>
+      <button data-act="reselect">Escolher lutadores</button>
+      <button data-act="quit">Menu principal</button>
+    </nav>
+  </section>
+</div>
+<div id="loading">Carregando o Abismo…</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+import { chromium } from 'playwright-core';
+const exe = process.env.CHROME || `${process.env.HOME}/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome`;
+const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const logs = [];
+page.on('console', (m) => logs.push(m.type() + ': ' + m.text()));
+page.on('pageerror', (e) => logs.push('pageerror: ' + e.message));
+await page.goto('http://127.0.0.1:8090/index.html?debug=1');
+await page.waitForTimeout(2500);
+await page.screenshot({ path: '/tmp/s1.png' });
+console.log(JSON.stringify(await page.evaluate(() => window.SANG && SANG.state())));
+await page.evaluate(() => SANG.start({ mode: 'cpu' }));
+await page.waitForTimeout(4000);
+await page.screenshot({ path: '/tmp/s2.png' });
+console.log(JSON.stringify(await page.evaluate(() => SANG.state())));
+console.log(logs.join('\n'));
+await browser.close();

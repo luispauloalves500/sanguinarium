@@ -1,0 +1,238 @@
+{
+  "started": "2026-11-27T00:48:44.377Z",
+  "checks": [
+    {
+      "name": "título -> menu principal",
+      "ok": true
+    },
+    {
+      "name": "menu: Lista de Golpes abre",
+      "ok": true
+    },
+    {
+      "name": "menu: seleção de lutador",
+      "ok": true
+    },
+    {
+      "name": "seleção -> arena",
+      "ok": true
+    },
+    {
+      "name": "luta iniciada pelo fluxo de menus",
+      "ok": true,
+      "arena": "coliseu"
+    },
+    {
+      "name": "partida real chegou ao fim (finish/matchEnd)",
+      "ok": true,
+      "phase": "finish",
+      "rounds": 2,
+      "fighters": [
+        {
+          "char": "varkhan",
+          "hp": 80,
+          "wins": 2,
+          "meter": 130,
+          "state": "idle",
+          "x": -5.43,
+          "combo": 2,
+          "hits": 25
+        },
+        {
+          "char": "lilith",
+          "hp": 0,
+          "wins": 0,
+          "meter": 264,
+          "state": "dizzy",
+          "x": -7.5,
+          "combo": 2,
+          "hits": 16
+        }
+      ]
+    },
+    {
+      "name": "partida real: golpes conectaram e sangue no chão",
+      "ok": true,
+      "p1hits": 25,
+      "p2hits": 16,
+      "decals": 753
+    },
+    {
+      "name": "resultado exibido após a partida real",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "execucao_real",
+        "fatalityName": "Execução Real",
+        "rounds": 2
+      }
+    },
+    {
+      "name": "revanche reinicia a partida",
+      "ok": true
+    },
+    {
+      "name": "supergolpe por teclado (U+I) iniciou a cinemática",
+      "ok": true
+    },
+    {
+      "name": "projéteis por teclado + roteiro em cena sem erros",
+      "ok": true,
+      "audio": [
+        "hit",
+        "hit",
+        "hit",
+        "heavyWhoosh",
+        "land",
+        "proj"
+      ]
+    },
+    {
+      "name": "Sentença de Sangue por teclado: execucao_real",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "execucao_real",
+        "fatalityName": "Execução Real",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue por teclado: machado_condenacao",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "machado_condenacao",
+        "fatalityName": "Machado da Condenação",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue por teclado: explosao_carmesim",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "explosao_carmesim",
+        "fatalityName": "Explosão Carmesim",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue por teclado: ritual_proibido",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "ritual_proibido",
+        "fatalityName": "Ritual Proibido",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "2P local: P1 (WASD) e P2 (setas) se movem de forma independente",
+      "ok": true,
+      "x0": [
+        -1.7,
+        1.7
+      ],
+      "x1": [
+        -0.579999999999999,
+        0.6999999999999991
+      ]
+    },
+    {
+      "name": "2P local: P2 ataca pelo teclado numérico",
+      "ok": true,
+      "audio": [
+        "ui",
+        "gong",
+        "gong",
+        "whoosh",
+        "whoosh",
+        "hit"
+      ]
+    },
+    {
+      "name": "CPU x CPU completa em coliseu",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "explosao_carmesim",
+        "fatalityName": "Explosão Carmesim",
+        "rounds": 2
+      },
+      "frames": 4846
+    },
+    {
+      "name": "CPU x CPU completa em catedral",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "ritual_proibido",
+        "fatalityName": "Ritual Proibido",
+        "rounds": 2
+      },
+      "frames": 5367
+    },
+    {
+      "name": "celular: toque no título abre menu",
+      "ok": true
+    },
+    {
+      "name": "celular: controles de toque visíveis",
+      "ok": true
+    },
+    {
+      "name": "celular: botão ESP dispara Lança Carmesim",
+      "ok": true,
+      "audio": [
+        "ui",
+        "ui",
+        "gong",
+        "gong",
+        "magic",
+        "proj",
+        "hit"
+      ]
+    }
+  ],
+  "errors": [],
+  "realMatch": {
+    "phase": "finish",
+    "pf": 3,
+    "round": 2,
+    "timer": 77,
+    "frame": 3043,
+    "result": null,
+    "fighters": [
+      {
+        "char": "varkhan",
+        "hp": 80,
+        "wins": 2,
+        "meter": 130,
+        "state": "idle",
+        "x": -5.43,
+        "combo": 2,
+        "hits": 25
+      },
+      {
+        "char": "lilith",
+        "hp": 0,
+        "wins": 0,
+        "meter": 264,
+        "state": "dizzy",
+        "x": -7.5,
+        "combo": 2,
+        "hits": 16
+      }
+    ]
+  },
+  "realMatchResult": {
+    "winner": 0,
+    "fatality": "execucao_real",
+    "fatalityName": "Execução Real",
+    "rounds": 2
+  },
+  "finished": "2026-11-27T00:56:02.549Z",
+  "consoleErrors": [],
+  "allPassed": true
+}
