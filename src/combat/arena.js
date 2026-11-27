@@ -7,7 +7,9 @@ export const HAZARD_ZONE = 0.9;         // borda "perigosa" para golpes de queda
 export const TRANSITION_ZONE = 0.6;     // borda para a transição de cenário
 export const TRANSITION_FRAMES = 150;
 export const VAULT_FRAMES = 38;
-export const STATUE = { windup: 30, active: [30, 36], reach: 3.5, dmg: 90 };
+export const STATUE = { windup: 30, active: [30, 36], reach: 3.5, dmg: 90, pivot: 7.85, pivotY: 0.8, theta: 1.72 };
+// ângulo de queda da estátua no quadro f (o render usa a mesma curva)
+export function statueAngle(f) { const k = Math.min(1, f / STATUE.active[1]); return STATUE.theta * k * k; }
 export const LAVA_DMG = 50;
 export const TRANSITION_DMG = 70;
 
@@ -98,17 +100,32 @@ export function stepStage(m) {
   for (let i = 0; i < 2; i++) { if (st.hazardCd[i] > 0) st.hazardCd[i]--; if (st.interactCd[i] > 0) st.interactCd[i]--; }
   for (const s of st.statueAct) {
     s.f++;
-    if (!s.hit && s.f >= STATUE.active[0] && s.f <= STATUE.active[1]) {
-      const def = m.fighters[1 - s.owner], att = m.fighters[s.owner];
-      const edge = s.side * C.STAGE_HALF;
-      const x0 = Math.min(edge, edge - s.side * STATUE.reach), x1 = Math.max(edge, edge - s.side * STATUE.reach);
-      const hb = [x0, 0, x1, 1.7];
-      if (def.x + 0.36 > hb[0] && def.x - 0.36 < hb[2] && def.y < 1.6 && def.invuln === 0 && !def.hidden &&
+    const def = m.fighters[1 - s.owner], att = m.fighters[s.owner];
+    // v0.3: contato real — a estátua é uma haste que gira no pivô (mesma curva do render); acerta quando
+    // a sua altura sobre a posição do oponente desce até a cabeça dele, e não depois de atravessá-lo
+    if (!s.hit && s.f >= 8 && s.f <= STATUE.active[1]) {
+      const th = statueAngle(s.f);
+      const pivot = s.side * STATUE.pivot, dx = Math.abs(pivot - def.x) - 0.3;
+      const along = STATUE.reach * Math.sin(Math.min(th, Math.PI / 2));
+      const top = def.y + (def.crouching ? 1.12 : def.ch.height - 0.05);
+      const hY = STATUE.pivotY + Math.max(0, dx) * Math.cos(th) / Math.max(0.05, Math.sin(th));
+      if (dx <= along && hY <= top && def.invuln === 0 && !def.hidden &&
         !['knockdown', 'getup', 'dead', 'cinematic', 'thrown'].includes(def.state)) {
         s.hit = true;
-        m.applyHit(att, def, { dmg: STATUE.dmg, level: 'overhead', kd: true, heavy: true, push: 0.1, hs: 20, bs: 16, hitstop: 12 },
-          { kind: 'hazard', name: 'estatua' }, { facing: -s.side, kind: 'estatua', hazard: true }, def.x, 1.2);
+        const hp0 = def.hp;
+        m.applyHit(att, def, { dmg: STATUE.dmg, level: 'overhead', kd: true, launch: 0.1, heavy: true, push: 0.1, hs: 20, bs: 16, hitstop: 12 },
+          { kind: 'hazard', name: 'estatua' }, { facing: -s.side, kind: 'estatua', hazard: true }, def.x, Math.min(top, 1.7));
+        // empurra o oponente para fora da área onde a estátua vai repousar (derrubado ou defendendo)
+        const rest = s.side * (STATUE.pivot - STATUE.reach * Math.sin(STATUE.theta) - 0.55);
+        const need = (Math.abs(def.x) - Math.abs(rest));
+        s.shove = need > 0 ? { left: 16, vx: (-s.side * need) / 16 } : null;
+        s.blocked = def.hp === hp0 || def.state === 'blockstun';
+        if (!s.blocked) { def.vx = 0; }
       }
+    }
+    if (s.shove && s.shove.left > 0) {
+      s.shove.left--;
+      def.x = Math.max(-C.STAGE_HALF, Math.min(C.STAGE_HALF, def.x + s.shove.vx));
     }
     if (s.f === STATUE.active[1]) { st.statues[s.side] = 'down'; m.emit({ type: 'statueDown', side: s.side, hit: s.hit }); }
   }

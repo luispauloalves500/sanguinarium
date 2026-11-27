@@ -3,6 +3,7 @@ import { CHARACTERS, ARENAS, moveFrameData } from '../combat/moves.js';
 import { DIFFICULTIES } from '../ai/cpu.js';
 import { ACTIONS, ACTION_LABEL, keyName } from '../input/devices.js';
 import { buildLadder } from '../modes/arcade.js';
+import { relabel as RL, keyFor } from './keylabels.js';
 const $ = (id) => document.getElementById(id);
 const IDS = Object.keys(CHARACTERS);
 const BTN_LABEL = { lp: 'J', hp: 'K', lk: 'U', hk: 'I' };
@@ -21,6 +22,7 @@ export class Screens {
     $('keymapReset').addEventListener('click', () => { app.devices.setBindings(null); app.setOption('keymap1', ''); this.buildKeymap(); });
     $('resultMenu').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) app.resultAction(b.dataset.act); });
     $('scr-title').addEventListener('click', () => this.titleGo()); // click (não pointerdown) para o toque não atravessar para o menu
+    $('moveTabs').innerHTML = IDS.map((id) => `<button data-ch="${id}">${CHARACTERS[id].name}</button>`).join('') + '<button data-ch="controls">Controles</button>';
     document.querySelectorAll('#scr-moves .tabs button').forEach((b) => b.addEventListener('click', () => this.showMoves(b.dataset.ch)));
     $('diffPrev').addEventListener('click', () => this.setDiff(-1)); $('diffNext').addEventListener('click', () => this.setDiff(1));
     $('pauseBtn').addEventListener('click', () => app.togglePause());
@@ -64,7 +66,7 @@ export class Screens {
     const app = this.app;
     app.audio.play('confirm');
     if (act === 'cpu' || act === 'versus' || act === 'training' || act === 'arcade') { app.mode = act; this.openSelect(); }
-    else if (act === 'moves') { this.show('moves'); this.showMoves('varkhan'); }
+    else if (act === 'moves') { this.show('moves'); this.showMoves(IDS[this.sel[0]] || IDS[0]); }
     else if (act === 'options') this.show('options');
     else if (act === 'credits') this.show('credits');
   }
@@ -81,7 +83,7 @@ export class Screens {
       const el = $('pick' + (p + 1));
       if (mode === 'arcade' && p === 1) {
         const lad = buildLadder(IDS[this.sel[0]], this.diff);
-        el.innerHTML = `<h4>ESCADA ARCADE</h4><ol class="ladder">${lad.map((s, i) => `<li><b>Luta ${i + 1}</b> · ${s.title} · ${ARENAS[s.arena].name} · ${DIFFICULTIES[s.difficulty]}</li>`).join('')}</ol><div class="bio">Vença as 3 lutas para ver o final de ${CHARACTERS[IDS[this.sel[0]]].name}. Perder permite continuar a mesma luta.</div>`;
+        el.innerHTML = `<h4>ESCADA ARCADE</h4><ol class="ladder">${lad.map((s, i) => `<li><b>Luta ${i + 1}</b> · ${s.title} · ${ARENAS[s.arena].name} · ${DIFFICULTIES[s.difficulty]}</li>`).join('')}</ol><div class="bio">Vença as ${lad.length} lutas para ver o final de ${CHARACTERS[IDS[this.sel[0]]].name}. Perder permite continuar a mesma luta.</div>`;
         el.classList.remove('ready');
         continue;
       }
@@ -186,20 +188,20 @@ export class Screens {
     const el = $('moveList');
     if (id === 'controls') { el.innerHTML = controlsHtml(); return; }
     const ch = CHARACTERS[id];
-    const rowN = (mid) => { const m = ch.moves[mid]; const fd = moveFrameData(m); const h = m.hits[0]; return `<tr><td>${m.name}</td><td>${NORMAL_LABEL[mid] || ''}</td><td>${h ? h.dmg : '-'}</td><td>${h ? LEVEL[h.level] : '-'}</td><td>${fd.startup ?? '-'}</td><td>${m.air ? '-' : fd.advBlock ?? '-'}</td></tr>`; };
+    const rowN = (mid) => { const m = ch.moves[mid]; const fd = moveFrameData(m); const h = m.hits[0]; return `<tr><td>${m.name}</td><td>${RL(NORMAL_LABEL[mid] || '')}</td><td>${h ? h.dmg : '-'}</td><td>${h ? LEVEL[h.level] : '-'}</td><td>${fd.startup ?? '-'}</td><td>${m.air ? '-' : fd.advBlock ?? '-'}</td></tr>`; };
     const normals = ['lp', 'hp', 'lk', 'hk', 'clp', 'chp', 'clk', 'chk', 'jlp', 'jhp', 'jlk', 'jhk'];
-    const specials = ch.specials.map((s) => { const m = ch.moves[s.move]; const t = m.spawn ? ch.projectiles[m.spawn[0].proj] : null; const dmg = t ? t.hit.dmg : m.hits.reduce((a, h) => a + h.dmg, 0) || '-'; return `<tr><td>${m.name}</td><td>${s.cmd.label}${s.simple ? ` <small>(ESP${{ n: '', f: ' + →', b: ' + ←', d: ' + ↓' }[s.simple]})</small>` : ''}</td><td>${dmg}</td></tr>`; }).join('');
+    const specials = ch.specials.map((s) => { const m = ch.moves[s.move]; const t = m.spawn ? ch.projectiles[m.spawn[0].proj] : null; const dmg = t ? t.hit.dmg : m.hits.reduce((a, h) => a + h.dmg, 0) || '-'; return `<tr><td>${m.name}</td><td>${s.cmd.label}${s.simple ? ` <small>(${keyFor('special')}${{ n: '', f: ' + →', b: ' + ←', d: ' + ↓' }[s.simple]})</small>` : ''}</td><td>${dmg}</td></tr>`; }).join('');
     el.innerHTML = `<h5>${ch.name.toUpperCase()}, ${ch.title.toUpperCase()}</h5>
       <table><tr><th>Golpe básico</th><th>Comando</th><th>Dano</th><th>Nível</th><th>Início</th><th>Vant. bloqueio</th></tr>${normals.map(rowN).join('')}
-      <tr><td>${ch.throwName} (agarrão)</td><td>O (perto)</td><td>${ch.throwDmg}</td><td>Agarrão</td><td>-</td><td>-</td></tr></table>
-      <h5>ESPECIAIS (J+K durante o especial = Potencializado, 1 barra)</h5><table><tr><th>Especial</th><th>Comando</th><th>Dano</th></tr>${specials}</table>
-      <h5>SUPERGOLPES (2 barras)</h5><table><tr><th>Supergolpe</th><th>Comando</th><th>Dano</th><th>Nível</th></tr>${[[ch.superMove, 'U + I (ou ESP + ↑)'], [ch.superMove2, '↓ + U + I (ou ESP + ↗)']].filter(([id]) => id).map(([id, cmd]) => { const m = ch.moves[id]; return `<tr><td>${m.name}</td><td>${cmd}</td><td>${m.seq.hits.reduce((a, h) => a + h.dmg, 0)}</td><td>${LEVEL[m.hits[0].level]}</td></tr>`; }).join('')}</table>
-      <h5>TRANSFORMAÇÃO (Fúria cheia)</h5><table><tr><td>${ch.transform}</td><td>L + O</td><td>+20% de dano por 10 s</td></tr></table>
-      <h5>COMBOS</h5><table>${ch.combos.map((c) => `<tr><td>${c.name}</td><td>${c.input}</td></tr>`).join('')}</table>
-      <h5>SENTENÇAS DE SANGUE (após "FINALIZE-O!")</h5><table>${ch.fatalities.map((f) => `<tr><td>${f.name}${f.proposal ? ' <small>(proposta v0.2)</small>' : ''}</td><td>${f.label}</td><td>Toque: ESP${{ n: '', d: ' + ↓', f: ' + →', b: ' + ←' }[f.simple] || ''}</td></tr>`).join('')}</table>
+      <tr><td>${ch.throwName} (agarrão)</td><td>${RL('O')} (perto)</td><td>${ch.throwDmg}</td><td>Agarrão</td><td>-</td><td>-</td></tr></table>
+      <h5>ESPECIAIS (${RL('J')}+${RL('K')} durante o especial = Potencializado, 1 barra)</h5><table><tr><th>Especial</th><th>Comando</th><th>Dano</th></tr>${specials}</table>
+      <h5>SUPERGOLPES (2 barras)</h5><table><tr><th>Supergolpe</th><th>Comando</th><th>Dano</th><th>Nível</th></tr>${[[ch.superMove, RL('U + I') + ` (ou ${keyFor('special')} + ↑)`], [ch.superMove2, RL('↓ + U + I') + ` (ou ${keyFor('special')} + ↗)`]].filter(([id]) => id).map(([id, cmd]) => { const m = ch.moves[id]; return `<tr><td>${m.name}</td><td>${cmd}</td><td>${m.seq.hits.reduce((a, h) => a + h.dmg, 0)}</td><td>${LEVEL[m.hits[0].level]}</td></tr>`; }).join('')}</table>
+      <h5>TRANSFORMAÇÃO (Fúria cheia)</h5><table><tr><td>${ch.transform}</td><td>${RL('L + O')}</td><td>+20% de dano por 10 s</td></tr></table>
+      <h5>COMBOS</h5><table>${ch.combos.map((c) => `<tr><td>${c.name}</td><td>${RL(c.input)}</td></tr>`).join('')}</table>
+      <h5>SENTENÇAS DE SANGUE (após "FINALIZE-O!")</h5><table>${ch.fatalities.map((f) => `<tr><td>${f.name}${f.proposal ? ' <small>(nome proposto)</small>' : ''}</td><td>${RL(f.label)}</td><td>Toque/atalho: ${keyFor('special')}${{ n: '', d: ' + ↓', f: ' + →', b: ' + ←' }[f.simple] || ''}</td></tr>`).join('')}</table>
       <h5>ARENAS INTERATIVAS (desativáveis em Opções)</h5><table>
-      <tr><td>Corrente do Muro (Coliseu/Fosso)</td><td>↑ + O de costas para a borda</td><td>salta por cima do oponente</td></tr>
-      <tr><td>Estátua do Carrasco (Catedral/Cripta)</td><td>↑ + O de costas para a borda</td><td>tomba sobre o oponente (90, alto; 1 por lado/round)</td></tr>
+      <tr><td>Corrente do Muro (Coliseu/Fosso)</td><td>↑ + ${RL('O')} de costas para a borda</td><td>salta por cima do oponente</td></tr>
+      <tr><td>Estátua do Carrasco (Catedral/Cripta)</td><td>↑ + ${RL('O')} de costas para a borda</td><td>tomba sobre o oponente (90, alto; 1 por lado/round)</td></tr>
       <tr><td>Poço de Lava / Braseiro Profano</td><td>derrube o oponente na borda</td><td>+50 de dano</td></tr>
       <tr><td>Transição (Portão do Fosso / Queda na Cripta)</td><td>golpe pesado que derruba colado à borda</td><td>+70 de dano e muda de cenário (1 vez por luta)</td></tr></table>`;
   }
@@ -221,15 +223,16 @@ export class Screens {
 }
 
 export function controlsHtml() {
-  return `<h5>TECLADO — JOGADOR 1</h5><table>
-  <tr><td>Movimento</td><td>W A S D (setas também no modo 1 jogador)</td></tr>
-  <tr><td>Soco rápido / forte</td><td>J / K</td></tr><tr><td>Chute rápido / forte</td><td>U / I</td></tr>
-  <tr><td>Bloqueio</td><td>L (segure; agachado bloqueia baixos)</td></tr><tr><td>Agarrão</td><td>O</td></tr>
-  <tr><td>Esquiva</td><td>Espaço</td></tr><tr><td>Especial simplificado</td><td>P (+ direção)</td></tr>
-  <tr><td>Especial potencializado</td><td>Comando + J+K</td></tr><tr><td>Supergolpe 1 / 2</td><td>U + I / ↓ + U + I</td></tr>
-  <tr><td>Elemento da arena</td><td>↑ + O perto da borda (de costas para ela)</td></tr>
-  <tr><td>Transformação (Fúria cheia)</td><td>L + O</td></tr><tr><td>Quebra de combo (2 barras)</td><td>Espaço + L durante combo sofrido</td></tr>
-  <tr><td>Escapar de agarrão</td><td>O logo após ser agarrado</td></tr><tr><td>Pausa</td><td>Esc</td></tr></table>
+  const k = keyFor;
+  return `<h5>TECLADO — JOGADOR 1 (teclas atuais; remapeie em Opções)</h5><table>
+  <tr><td>Movimento</td><td>${k('up')} ${k('left')} ${k('down')} ${k('right')} (setas também no modo 1 jogador)</td></tr>
+  <tr><td>Soco rápido / forte</td><td>${k('lp')} / ${k('hp')}</td></tr><tr><td>Chute rápido / forte</td><td>${k('lk')} / ${k('hk')}</td></tr>
+  <tr><td>Bloqueio</td><td>${k('block')} (segure; agachado bloqueia baixos)</td></tr><tr><td>Agarrão</td><td>${k('grab')}</td></tr>
+  <tr><td>Esquiva</td><td>${k('dodge')}</td></tr><tr><td>Especial simplificado</td><td>${k('special')} (+ direção)</td></tr>
+  <tr><td>Especial potencializado</td><td>Comando + ${k('lp')}+${k('hp')}</td></tr><tr><td>Supergolpe 1 / 2</td><td>${k('lk')} + ${k('hk')} / ↓ + ${k('lk')} + ${k('hk')}</td></tr>
+  <tr><td>Elemento da arena</td><td>↑ + ${k('grab')} perto da borda (de costas para ela)</td></tr>
+  <tr><td>Transformação (Fúria cheia)</td><td>${k('block')} + ${k('grab')}</td></tr><tr><td>Quebra de combo (2 barras)</td><td>${k('dodge')} + ${k('block')} durante combo sofrido</td></tr>
+  <tr><td>Escapar de agarrão</td><td>${k('grab')} logo após ser agarrado</td></tr><tr><td>Pausa</td><td>Esc</td></tr></table>
   <h5>TECLADO — JOGADOR 2</h5><table>
   <tr><td>Movimento</td><td>Setas</td></tr><tr><td>Soco rápido / forte</td><td>Num1 / Num2 (ou Insert / Home)</td></tr>
   <tr><td>Chute rápido / forte</td><td>Num4 / Num5 (ou Delete / End)</td></tr><tr><td>Bloqueio / Agarrão</td><td>Num3 / Num6 (ou PageDown / PageUp)</td></tr>
