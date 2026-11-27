@@ -1182,19 +1182,19 @@ Object.assign(SUPERS, {
     const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
     const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
     pose(att, f < 30 ? 'castUp_w' : f < 120 ? 'cast_s' : 'castUp_s', { speed: 6 });
-    pose(def, f < 125 ? (f > 30 && f % 20 < 5 ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 125 ? 0.4 : 0 });
+    pose(def, f < 126 ? ([30, 48, 66, 84].some((h) => f >= h && f < h + 5) ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 126 ? 0.4 : 0 });
     ctx.once('fx', 1, () => { audio.play('super'); audio.play('freeze'); ctx.hud.flash(0.4); ctx.view.darken(2.4); });
-    ctx.once('blk', 24, () => { state.block = iceBlock(vfx, dx, 2.15, 1.75); });
-    if (f >= 24 && f < 60) growIce(state.block, (f - 24) / 30);
+    ctx.once('blk', 12, () => { state.block = iceBlock(vfx, dx, 2.15, 1.95); });
+    if (f >= 12 && f < 40) growIce(state.block, (f - 12) / 24);
     if (f % 2 === 0) blood.aura(mid + (Math.random() - 0.5) * 4, 3, (Math.random() - 0.5) * 2, 3, 0xe8faff, 0.2, -0.03);
-    [40, 60, 80, 100].forEach((h, i) => ctx.once('l' + i, h - 10, () => {
+    [30, 48, 66, 84].forEach((h, i) => ctx.once('l' + i, h - 10, () => {
       const l = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.8, 6), iceMat(0.9));
       const a = -0.9 + i * 0.6, from = V(dx + Math.cos(a) * 3 * -dir, 1.2 + Math.sin(a) * 1.5 + 1, 0.4), to = V(dx, 1.2, 0);
       l.position.copy(from); l.lookAt(to); l.rotateX(Math.PI / 2);
       vfx.add(l, 10 / 60 + 0.05, (o, age) => o.position.lerpVectors(from, to, Math.min(1, age * 6)));
       ctx.once('lh' + i, h, () => { blood.spark(dx, 1.2, 0, 30, ICE, 1.3); blood.burst(dx, 1.2, 0, dir, 20, 0.8); audio.play('hit', { slash: true }); cam.shake(0.2); });
     }));
-    ctx.once('boom', 125, () => { if (state.block) state.block.visible = false; blood.spark(dx, 1.1, 0, 120, 0xd8f4ff, 2.0); blood.burst(dx, 1.2, 0, dir, 80, 1.4); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0xbfe8ff, 40, 0.6, dx, 1.3, 1); });
+    ctx.once('boom', 126, () => { if (state.block) state.block.visible = false; blood.spark(dx, 1.1, 0, 120, 0xd8f4ff, 2.0); blood.burst(dx, 1.2, 0, dir, 80, 1.4); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0xbfe8ff, 40, 0.6, dx, 1.3, 1); });
     const ang = f * 0.03;
     cam.setCine(V(mid + Math.sin(ang) * 3.2 * dir, 1.5, Math.cos(ang) * 3.2), V(dx, 1.2, 0), 3);
   },
@@ -1203,10 +1203,11 @@ Object.assign(SUPERS, {
     const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
     const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
     pose(att, f < 30 ? 'castLow_w' : f < 140 ? 'castLow_s' : 'winNymera', { speed: 6 });
-    pose(def, f < 140 ? (f > 50 && f < 60 ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 140 ? Math.min(1, (f - 140) * 0.05) : Math.min(0.5, Math.max(0, f - 50) * 0.02) });
+    pose(def, f < 140 ? ((f >= 44 && f < 52) || (f >= 80 && f < 88) ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 140 ? Math.min(1, (f - 140) * 0.05) : Math.min(0.5, Math.max(0, f - 44) * 0.02) });
     ctx.once('fx', 1, () => { audio.play('super'); ctx.hud.flash(0.4); ctx.view.darken(2.8); });
     for (let i = 0; i < 8; i++) ctx.once('sp' + i, 20 + i * 4, () => { const a = (i / 8) * Math.PI * 2; iceSpike(vfx, dx + Math.cos(a) * 0.7, Math.sin(a) * 0.5, 2.4, -Math.cos(a) * 0.35, 2.2); audio.play('freeze'); });
-    ctx.once('lock', 54, () => { cam.shake(0.3); blood.burst(dx, 1.2, 0, dir, 40, 1); audio.play('hit', { heavy: true }); });
+    ctx.once('lock', 44, () => { cam.shake(0.3); blood.burst(dx, 1.2, 0, dir, 40, 1); audio.play('hit', { heavy: true }); });
+    ctx.once('crush', 80, () => { cam.shake(0.3); blood.spark(dx, 1.2, 0, 40, ICE, 1.2); blood.burst(dx, 1.2, 0, -dir, 40, 1); audio.play('freeze'); audio.play('hit', { heavy: true }); });
     if (f > 60 && f < 140 && f % 4 === 0) blood.aura(dx, 0.4 + Math.random() * 2, 0, 3, ICE, 0.6, 0.01);
     ctx.once('boom', 140, () => { blood.spark(dx, 1.3, 0, 140, 0xd8f4ff, 2.2); blood.burst(dx, 1.4, 0, dir, 110, 1.6); audio.play('explosion'); cam.shake(0.7); ctx.hud.flash(); ctx.view.flash(0x9ae0ff, 50, 0.7, dx, 1.4, 1); blood.pool(dx, 0.2, 1.0); });
     cam.setCine(V(mid + dir * 0.4 - Math.sin(f * 0.012) * 2.6 * dir, 1.0 + f * 0.006, 3.8), V(dx, 1.3, 0), 3);
@@ -1216,13 +1217,13 @@ Object.assign(SUPERS, {
     const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
     const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
     pose(att, f < 30 ? 'castUp_w' : 'castUp_s', { speed: 6 });
-    const hits = [40, 62, 84, 106];
-    pose(def, f < 130 ? (hits.some((h) => f >= h && f < h + 8) ? 'writhe' : 'dizzy') : 'tumble', { speed: 18, lift: f >= 130 ? 0.3 : 0 });
+    const hits = [34, 52, 70, 88];
+    pose(def, f < 134 ? (hits.some((h) => f >= h && f < h + 8) ? 'writhe' : 'dizzy') : 'tumble', { speed: 18, lift: f >= 134 ? 0.3 : 0 });
     ctx.once('fx', 1, () => { audio.play('super'); audio.play('magic'); ctx.hud.flash(0.4); ctx.view.darken(2.6); });
     ctx.once('cl', 20, () => { toxicCloud(vfx, mid, 1.0, 2.6, 2.3); toxicCloud(vfx, dx, 1.4, 1.8, 2.1, '#a0ff50'); });
     hits.forEach((h, i) => ctx.once('h' + i, h, () => { blood.spark(dx, 1.1 + i * 0.1, 0, 30, TOXIC, 1.2); blood.burst(dx, 1.2, 0, i % 2 ? dir : -dir, 25, 0.8); audio.play('hit'); cam.shake(0.2); }));
     if (f % 3 === 0) blood.aura(dx, 0.3 + Math.random() * 2, 0, 3, TOXIC, 0.8, 0.02);
-    ctx.once('boom', 130, () => { blood.spark(dx, 1.2, 0, 120, TOXIC, 2.0); blood.burst(dx, 1.2, 0, dir, 100, 1.6); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0x70ff30, 50, 0.6, dx, 1.3, 1); });
+    ctx.once('boom', 134, () => { blood.spark(dx, 1.2, 0, 120, TOXIC, 2.0); blood.burst(dx, 1.2, 0, dir, 100, 1.6); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0x70ff30, 50, 0.6, dx, 1.3, 1); });
     cam.setCine(V(mid + Math.sin(f * 0.025) * 3.4 * dir, 1.6, Math.cos(f * 0.025) * 3.4), V(mid, 1.2, 0), 3);
   },
   // ---------------- PESTILUS: Praga Negra (nome proposto) — revoada de corvos bica o oponente até cair
@@ -1230,8 +1231,8 @@ Object.assign(SUPERS, {
     const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
     const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
     pose(att, f < 30 ? 'cast_w' : f < 140 ? 'cast_s' : 'winPestilus', { speed: 6 });
-    const peck = f > 40 && f < 140 && f % 12 < 4;
-    pose(def, f < 140 ? (peck ? 'hitHigh' : 'block') : 'tumble', { speed: 22, lift: f >= 140 ? 0.4 : 0 });
+    const peck = [40, 64, 88].some((h) => f >= h && f < h + 6) || (f > 40 && f < 142 && f % 12 < 3);
+    pose(def, f < 142 ? (peck ? 'hitHigh' : 'block') : 'tumble', { speed: 22, lift: f >= 142 ? 0.4 : 0 });
     ctx.once('fx', 1, () => { audio.play('super'); ctx.hud.flash(0.4); ctx.view.darken(2.8); });
     if (!state.crows && f >= 20) {
       state.crows = [];
@@ -1242,14 +1243,14 @@ Object.assign(SUPERS, {
           const to = V(dx + Math.cos(a) * (0.4 + (i % 4) * 0.15), 0.9 + (i % 5) * 0.2 + Math.sin(a * 2) * 0.2, Math.sin(a) * 0.5);
           o.position.lerpVectors(from, to, k); o.lookAt(dx, 1.2, 0); flap(o, age + i);
           if (Math.random() < 0.15) blood.aura(o.position.x, o.position.y, o.position.z, 1, 0x60ff20, 0.05, 0);
-          if (ctx.f > 140) o.position.y += (ctx.f - 140) * 0.06;
+          if (ctx.f > 142) o.position.y += (ctx.f - 142) * 0.06;
         });
         state.crows.push(c);
       }
       audio.play('whoosh');
     }
     if (peck && f % 12 === 1) { blood.burst(dx, 1.0 + Math.random() * 0.8, 0, Math.random() < 0.5 ? dir : -dir, 20, 0.8); audio.play('hit', { slash: true }); }
-    ctx.once('boom', 140, () => { blood.burst(dx, 1.2, 0, dir, 100, 1.5); blood.spark(dx, 1.2, 0, 60, 0x60ff20, 1.6); audio.play('explosion'); cam.shake(0.5); ctx.hud.flash(); blood.pool(dx, 0.2, 1.0); });
+    ctx.once('boom', 142, () => { blood.burst(dx, 1.2, 0, dir, 100, 1.5); blood.spark(dx, 1.2, 0, 60, 0x60ff20, 1.6); audio.play('explosion'); cam.shake(0.5); ctx.hud.flash(); blood.pool(dx, 0.2, 1.0); });
     cam.setCine(V(mid - Math.sin(f * 0.02) * 3.4 * dir, 1.5 + f * 0.004, 3.8), V(dx, 1.3, 0), 3);
   },
 });

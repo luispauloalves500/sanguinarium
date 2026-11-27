@@ -30,4 +30,4 @@ export const GETUP_FRAMES = 18;
 export const DODGE_FRAMES = 22;
 export const DODGE_INVULN = [2, 15];
 export const REGEN_USES = 2;
-export const POISON_TICK = 4; // v0.4: dano do veneno a cada 15 quadros
+export const POISON_TICK = 3; // v0.4: dano do veneno a cada 15 quadros

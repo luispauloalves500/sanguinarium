@@ -170,7 +170,7 @@ const kazuroMoves = {
   corte_espectral: mv('corte_espectral', 'Corte Espectral', 30, [], { kind: 'special', anim: 'katana', spawn: [{ f: 10, proj: 'slash' }] }),
   investida: mv('investida', 'Investida Relâmpago', 38, [hit(9, 15, [0.1, 0.6, 1.4, 1.75], 66, 'mid', { hs: 22, bs: 12, push: 0.12, heavy: true, slash: true })],
     { kind: 'special', anim: 'dashSlash', vel: [{ f0: 5, f1: 15, vx: 0.34 }], invuln: [6, 8] }),
-  iaijutsu: mv('iaijutsu', 'Iaijutsu do Vazio', 44, [hit(14, 16, [0.3, 0.6, 2.3, 1.8], 80, 'mid', { kd: true, launch: 0.06, hs: 30, bs: 18, push: 0.12, heavy: true, slash: true, hitstop: 12 })],
+  iaijutsu: mv('iaijutsu', 'Iaijutsu do Vazio', 44, [hit(14, 16, [0.3, 0.6, 2.3, 1.8], 84, 'mid', { kd: true, launch: 0.06, hs: 30, bs: 18, push: 0.12, heavy: true, slash: true, hitstop: 12 })],
     { kind: 'special', anim: 'iai' }),
   reflexo: mv('reflexo', 'Lâmina Reflexa', 40, [], { kind: 'special', anim: 'guard', counterStance: [3, 24], counterMove: 'reflexo_contra' }),
   reflexo_contra: mv('reflexo_contra', 'Lâmina Reflexa (contra)', 30, [hit(4, 8, [0.0, 0.5, 1.6, 1.9], 95, 'unblockable', { kd: true, launch: 0.12, hs: 30, push: 0.1, heavy: true, slash: true, hitstop: 12 })],
@@ -208,9 +208,9 @@ const kazuroProj = {
 // ---------------- BRAKKOR, O DEVORADOR (v0.3) ----------------
 // Demônio gigante: lento, alcance e dano altos, agarrões de comando, superarmadura em investidas, fogo e terremotos.
 const brakkorMoves = {
-  lp: mv('lp', 'Tapa de Garra', 21, [hit(7, 9, [0.25, 1.4, 1.35, 1.95], 40, 'high', { hs: 16, bs: 11, push: 0.09 })],
+  lp: mv('lp', 'Tapa de Garra', 19, [hit(6, 8, [0.25, 1.4, 1.35, 1.95], 40, 'high', { hs: 16, bs: 11, push: 0.09 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'jab' }),
-  hp: mv('hp', 'Punho de Pedra', 37, [hit(13, 16, [0.3, 1.0, 1.85, 2.1], 82, 'mid', { hs: 23, bs: 16, push: 0.13, heavy: true })],
+  hp: mv('hp', 'Punho de Pedra', 35, [hit(12, 15, [0.3, 1.0, 1.85, 2.1], 82, 'mid', { hs: 23, bs: 16, push: 0.13, heavy: true })],
     { cancel: STD_CANCEL, anim: 'smash' }),
   lk: mv('lk', 'Pisada', 25, [hit(9, 11, [0.25, 0.3, 1.3, 1.0], 45, 'mid', { hs: 17, bs: 11, push: 0.09 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'kickMid' }),
@@ -267,11 +267,11 @@ const brakkorProj = {
 // Assassina de controle: congelamento, espinhos, armadilhas e clones congelados (GDD §4). Nomes de golpes: propostas.
 const ICE = { ice: true };
 const nymeraMoves = {
-  lp: mv('lp', 'Corte de Adaga', 14, [hit(4, 6, [0.25, 1.15, 1.0, 1.55], 24, 'high', { hs: 14, bs: 10, slash: true })],
+  lp: mv('lp', 'Corte de Adaga', 15, [hit(5, 7, [0.25, 1.15, 1.0, 1.55], 24, 'high', { hs: 14, bs: 10, slash: true })],
     { cancel: ['lp2', 'hp', 'lk', ...STD_CANCEL], anim: 'jab' }),
   lp2: mv('lp2', 'Corte de Adaga (2)', 16, [hit(4, 6, [0.25, 1.1, 1.05, 1.55], 24, 'high', { hs: 15, bs: 10, slash: true })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'jab2', chainOnly: true }),
-  hp: mv('hp', 'Estocada Gélida', 26, [hit(8, 10, [0.25, 0.9, 1.35, 1.6], 52, 'mid', { hs: 18, bs: 13, push: 0.09, slash: true })],
+  hp: mv('hp', 'Estocada Gélida', 28, [hit(9, 11, [0.25, 0.9, 1.35, 1.6], 52, 'mid', { hs: 18, bs: 13, push: 0.09, slash: true })],
     { cancel: ['hk', ...STD_CANCEL], anim: 'lunge' }),
   lk: mv('lk', 'Chute Cristalino', 18, [hit(5, 7, [0.25, 0.4, 1.2, 0.95], 32, 'mid', { hs: 15, bs: 10 })],
     { cancel: ['lk2', 'hp', ...STD_CANCEL], anim: 'kickMid' }),
@@ -281,7 +281,7 @@ const nymeraMoves = {
     { cancel: STD_CANCEL, anim: 'kickHigh' }),
   clp: mv('clp', 'Adaga Baixa', 15, [hit(4, 6, [0.25, 0.5, 1.05, 0.95], 22, 'mid', { hs: 13, bs: 9, slash: true })],
     { crouch: true, cancel: ['clp', 'chp', ...STD_CANCEL], anim: 'cjab' }),
-  chp: mv('chp', 'Pico de Gelo', 32, [hit(8, 11, [0.1, 0.8, 1.05, 2.3], 76, 'mid', { launch: 0.23, kd: true, hs: 30, bs: 13, heavy: true, push: 0.03 })],
+  chp: mv('chp', 'Pico de Gelo', 32, [hit(8, 11, [0.1, 0.8, 1.05, 2.3], 66, 'mid', { launch: 0.23, kd: true, hs: 30, bs: 13, heavy: true, push: 0.03 })],
     { crouch: true, cancel: ['special'], anim: 'uppercut' }),
   clk: mv('clk', 'Rasteira Gélida', 18, [hit(5, 7, [0.25, 0, 1.25, 0.35], 26, 'low', { hs: 13, bs: 9 })],
     { crouch: true, cancel: ['clk', 'special'], anim: 'clow' }),
@@ -294,20 +294,20 @@ const nymeraMoves = {
   grab_whiff: mv('grab_whiff', 'Agarrão (errou)', 25, [], { anim: 'grab' }),
   // ---- especiais
   lanca_gelo: mv('lanca_gelo', 'Lança de Gelo', 32, [], { kind: 'special', anim: 'cast', spawn: [{ f: 12, proj: 'icelance' }] }),
-  deslize: mv('deslize', 'Deslize Glacial', 40, [hit(8, 20, [0.1, 0, 1.3, 0.5], 64, 'low', { kd: true, launch: 0.08, hs: 28, bs: 14, push: 0.12, heavy: true })],
+  deslize: mv('deslize', 'Deslize Glacial', 40, [hit(8, 20, [0.1, 0, 1.3, 0.5], 54, 'low', { kd: true, launch: 0.08, hs: 28, bs: 14, push: 0.12, heavy: true })],
     { kind: 'special', anim: 'slide', vel: [{ f0: 5, f1: 20, vx: 0.2 }] }),
   espinhos_gelo: mv('espinhos_gelo', 'Espinhos Glaciais', 44, [], { kind: 'special', anim: 'castLow', spawn: [{ f: 12, proj: 'icespikes', atTarget: true }] }),
   armadilha: mv('armadilha', 'Armadilha de Gelo', 34, [], { kind: 'special', anim: 'castLow', spawn: [{ f: 12, proj: 'trap', at: 1.6 }] }),
-  clone_gelo: mv('clone_gelo', 'Clone Congelado', 40, [], { kind: 'special', anim: 'parry', counterStance: [3, 24], counterMove: 'clone_gelo_contra' }),
-  clone_gelo_contra: mv('clone_gelo_contra', 'Clone Congelado (contra)', 32, [hit(4, 8, [0.0, 0.5, 1.5, 1.9], 50, 'unblockable', { effect: 'freeze', freeze: 75, ...ICE, hs: 30, push: 0.02, slash: true, hitstop: 10 })],
+  clone_gelo: mv('clone_gelo', 'Clone Congelado', 46, [], { kind: 'special', anim: 'parry', counterStance: [4, 15], counterMove: 'clone_gelo_contra' }),
+  clone_gelo_contra: mv('clone_gelo_contra', 'Clone Congelado (contra)', 32, [hit(4, 8, [0.0, 0.5, 1.5, 1.9], 42, 'unblockable', { effect: 'freeze', freeze: 34, ...ICE, hs: 30, push: 0.02, slash: true, hitstop: 10 })],
     { kind: 'special', anim: 'lunge', internal: true }),
-  garra_inverno: mv('garra_inverno', 'Garra do Inverno', 44, [hit(5, 10, [0.0, 0.5, 1.2, 2.6], 72, 'mid', { launch: 0.25, kd: true, hs: 30, bs: 18, heavy: true, push: 0.02 })],
+  garra_inverno: mv('garra_inverno', 'Garra do Inverno', 44, [hit(5, 10, [0.0, 0.5, 1.2, 2.6], 64, 'mid', { launch: 0.25, kd: true, hs: 30, bs: 18, heavy: true, push: 0.02 })],
     { kind: 'special', anim: 'castUp', invuln: [1, 7] }),
   nevasca: mv('nevasca', 'Nevasca', 54, [
     hit(12, 14, [-0.9, 0.3, 1.5, 2.0], 20, 'mid', { hs: 16, bs: 9, push: 0.01 }),
     hit(20, 22, [-0.9, 0.3, 1.5, 2.0], 20, 'mid', { hs: 16, bs: 9, push: 0.01 }),
     hit(28, 30, [-0.9, 0.3, 1.5, 2.0], 20, 'mid', { hs: 16, bs: 9, push: 0.01 }),
-    hit(36, 38, [-0.9, 0.3, 1.6, 2.0], 34, 'mid', { effect: 'freeze', freeze: 40, ...ICE, hs: 24, bs: 12, push: 0.1 }),
+    hit(36, 38, [-0.9, 0.3, 1.6, 2.0], 34, 'mid', { effect: 'freeze', freeze: 28, ...ICE, hs: 24, bs: 12, push: 0.1 }),
   ], { kind: 'special', anim: 'spin', multi: true }),
   passo_glacial: mv('passo_glacial', 'Passo Glacial', 36, [], { kind: 'special', anim: 'vanish', invuln: [3, 22], script: 'teleport', hideFrames: [5, 18], exMove: 'passo_glacial_ex' }),
   passo_glacial_ex: mv('passo_glacial_ex', 'Passo Glacial (pot.)', 30, [hit(3, 9, [0.0, 0.5, 1.3, 1.8], 66, 'mid', { effect: 'freeze', freeze: 55, ...ICE, hs: 22, bs: 14, push: 0.05, slash: true })],
@@ -324,11 +324,11 @@ nymeraMoves.lp.chainName = 'Adagas Gêmeas';
 
 const nymeraProj = {
   icelance: { vx: 0.22, y: 1.25, box: [-0.45, -0.15, 0.45, 0.15], life: 60, clash: true, fx: 'icelance',
-    hit: hit(0, 0, null, 58, 'mid', { hs: 20, bs: 12, push: 0.08 }), ex: { vx: 0.27, dmg: 70, effect: 'freeze', freeze: 60, ice: true } },
+    hit: hit(0, 0, null, 50, 'mid', { hs: 20, bs: 12, push: 0.08 }), ex: { vx: 0.27, dmg: 70, effect: 'freeze', freeze: 60, ice: true } },
   icespikes: { vx: 0, y: 0, delay: 16, box: [-0.55, 0, 0.55, 1.5], life: 12, clash: false, fx: 'icespikes', ground: true,
-    hit: hit(0, 0, null, 70, 'mid', { kd: true, launch: 0.16, hs: 30, bs: 14, push: 0.04, heavy: true }), ex: { dmg: 100, wide: 1.0 } },
+    hit: hit(0, 0, null, 62, 'mid', { kd: true, launch: 0.16, hs: 30, bs: 14, push: 0.04, heavy: true }), ex: { dmg: 100, wide: 1.0 } },
   trap: { vx: 0, y: 0, delay: 24, box: [-0.4, 0, 0.4, 0.25], life: 260, clash: false, fx: 'trap', ground: true, maxActive: 1,
-    hit: hit(0, 0, null, 35, 'unblockable', { effect: 'freeze', freeze: 50, ice: true, hs: 20, push: 0 }), ex: { dmg: 50, freeze: 80, wide: 0.6 } },
+    hit: hit(0, 0, null, 35, 'unblockable', { effect: 'freeze', freeze: 36, ice: true, hs: 20, push: 0 }), ex: { dmg: 50, freeze: 80, wide: 0.6 } },
 };
 
 // ---------------- PESTILUS, O MÉDICO DA PESTE (v0.4) ----------------
@@ -339,11 +339,11 @@ const pestilusMoves = {
     { cancel: ['lp2', 'hp', ...STD_CANCEL], anim: 'jab' }),
   lp2: mv('lp2', 'Golpe de Bengala (2)', 18, [hit(5, 7, [0.25, 1.1, 1.15, 1.6], 28, 'high', { hs: 15, bs: 10 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'jab2', chainOnly: true }),
-  hp: mv('hp', 'Bisturi Largo', 30, [hit(10, 12, [0.3, 0.8, 1.5, 1.7], 56, 'mid', { hs: 19, bs: 13, push: 0.1, slash: true })],
+  hp: mv('hp', 'Bisturi Largo', 30, [hit(10, 12, [0.3, 0.8, 1.5, 1.7], 60, 'mid', { hs: 19, bs: 13, push: 0.1, slash: true })],
     { cancel: STD_CANCEL, anim: 'claw' }),
   lk: mv('lk', 'Chute Torto', 20, [hit(6, 8, [0.25, 0.4, 1.2, 0.95], 34, 'mid', { hs: 15, bs: 10 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'kickMid' }),
-  hk: mv('hk', 'Pontapé da Praga', 33, [hit(11, 14, [0.25, 0.9, 1.45, 1.7], 66, 'high', { hs: 21, bs: 14, push: 0.12, heavy: true })],
+  hk: mv('hk', 'Pontapé da Praga', 33, [hit(11, 14, [0.25, 0.9, 1.45, 1.7], 62, 'high', { hs: 21, bs: 14, push: 0.12, heavy: true })],
     { cancel: STD_CANCEL, anim: 'kickHigh' }),
   clp: mv('clp', 'Agulhada', 16, [hit(5, 7, [0.25, 0.5, 1.1, 0.95], 22, 'mid', { hs: 13, bs: 9, ...PSN(60) })],
     { crouch: true, cancel: ['clp', 'chp', ...STD_CANCEL], anim: 'cjab' }),
@@ -360,16 +360,16 @@ const pestilusMoves = {
   grab_whiff: mv('grab_whiff', 'Agarrão (errou)', 28, [], { anim: 'grab' }),
   // ---- especiais
   bomba_toxica: mv('bomba_toxica', 'Bomba Tóxica', 40, [], { kind: 'special', anim: 'throwAxe', spawn: [{ f: 15, proj: 'bomb' }] }),
-  bisturi: mv('bisturi', 'Bisturi Corrompido', 40, [hit(10, 15, [0.2, 0.7, 1.4, 1.6], 54, 'mid', { hs: 22, bs: 13, push: 0.1, slash: true, ...PSN(150) })],
+  bisturi: mv('bisturi', 'Bisturi Corrompido', 40, [hit(10, 15, [0.2, 0.7, 1.4, 1.6], 54, 'mid', { hs: 22, bs: 13, push: 0.1, slash: true, ...PSN(110) })],
     { kind: 'special', anim: 'lunge', vel: [{ f0: 5, f1: 14, vx: 0.24 }] }),
   nuvem: mv('nuvem', 'Nuvem Corrosiva', 46, [], { kind: 'special', anim: 'cast', spawn: [{ f: 16, proj: 'cloud', at: 2.0 }] }),
   ratos: mv('ratos', 'Enxame de Ratos', 42, [], { kind: 'special', anim: 'castLow', spawn: [{ f: 14, proj: 'rats' }] }),
   seringa: mv('seringa', 'Seringa Venenosa', 30, [], { kind: 'special', anim: 'jab', spawn: [{ f: 9, proj: 'syringe' }] }),
   corvos: mv('corvos', 'Corvos da Peste', 46, [], { kind: 'special', anim: 'castUp', spawn: [{ f: 12, proj: 'crows', atTarget: true }] }),
-  miasma: mv('miasma', 'Explosão Miasmática', 50, [hit(11, 15, [-1.2, 0, 1.5, 2.2], 62, 'mid', { kd: true, launch: 0.1, hs: 28, bs: 12, push: 0.14, heavy: true, ...PSN(90) })],
+  miasma: mv('miasma', 'Explosão Miasmática', 50, [hit(11, 15, [-1.2, 0, 1.5, 2.2], 62, 'mid', { kd: true, launch: 0.1, hs: 28, bs: 12, push: 0.14, heavy: true, ...PSN(60) })],
     { kind: 'special', anim: 'roar', invuln: [1, 9] }),
   frasco: mv('frasco', 'Frasco Ácido', 44, [
-    hit(10, 12, [0.2, 0.6, 1.4, 1.7], 30, 'mid', { hs: 18, bs: 10, push: 0.02, ...PSN(120) }),
+    hit(10, 12, [0.2, 0.6, 1.4, 1.7], 30, 'mid', { hs: 18, bs: 10, push: 0.02, ...PSN(90) }),
     hit(20, 23, [0.2, 0.4, 1.5, 1.8], 40, 'mid', { hs: 26, bs: 12, push: 0.13, kd: true, launch: 0.08, heavy: true }),
   ], { kind: 'special', anim: 'claw', multi: true }),
   // ---- supergolpes
@@ -384,15 +384,15 @@ pestilusMoves.lp.chainName = 'Receita Dupla';
 
 const pestilusProj = {
   bomb: { vx: 0.075, vy: 0.17, grav: 0.0085, y: 1.6, box: [-0.25, -0.25, 0.25, 0.25], life: 90, clash: true, fx: 'bomb', burst: 'bombcloud',
-    hit: hit(0, 0, null, 45, 'mid', { hs: 20, bs: 12, push: 0.06, poison: 120 }), ex: { vx: 0.09, dmg: 60 } },
+    hit: hit(0, 0, null, 42, 'mid', { hs: 20, bs: 12, push: 0.06, poison: 100 }), ex: { vx: 0.09, dmg: 60 } },
   bombcloud: { vx: 0, y: 0, box: [-0.8, 0, 0.8, 1.9], life: 100, clash: false, fx: 'cloud', linger: true, tick: 30,
-    hit: hit(0, 0, null, 10, 'mid', { hs: 12, bs: 6, push: 0.02, poison: 150 }), ex: { dmg: 14, poison: 240, wide: 0.8 } },
-  cloud: { vx: 0, y: 0, delay: 6, box: [-0.85, 0, 0.85, 2.0], life: 150, clash: false, fx: 'cloud', linger: true, tick: 26,
-    hit: hit(0, 0, null, 12, 'mid', { hs: 12, bs: 6, push: 0.02, poison: 180 }), ex: { dmg: 16, poison: 300, wide: 1.0 } },
+    hit: hit(0, 0, null, 10, 'mid', { hs: 12, bs: 6, push: 0.02, poison: 110 }), ex: { dmg: 14, poison: 240, wide: 0.8 } },
+  cloud: { vx: 0, y: 0, delay: 6, box: [-0.85, 0, 0.85, 2.0], life: 150, clash: false, fx: 'cloud', linger: true, tick: 32,
+    hit: hit(0, 0, null, 12, 'mid', { hs: 12, bs: 6, push: 0.02, poison: 130 }), ex: { dmg: 16, poison: 300, wide: 1.0 } },
   rats: { vx: 0.13, y: 0.0, box: [-0.5, 0, 0.5, 0.35], life: 70, clash: false, fx: 'rats', ground: true,
-    hit: hit(0, 0, null, 58, 'low', { kd: true, launch: 0.1, hs: 30, bs: 14, push: 0.06, heavy: true, poison: 90 }), ex: { vx: 0.17, dmg: 85 } },
+    hit: hit(0, 0, null, 58, 'low', { kd: true, launch: 0.1, hs: 30, bs: 14, push: 0.06, heavy: true, poison: 60 }), ex: { vx: 0.17, dmg: 85 } },
   syringe: { vx: 0.3, y: 1.3, box: [-0.25, -0.08, 0.25, 0.08], life: 40, clash: true, fx: 'syringe',
-    hit: hit(0, 0, null, 30, 'mid', { hs: 18, bs: 10, push: 0.05, poison: 240 }), ex: { vx: 0.36, dmg: 45, poison: 360 } },
+    hit: hit(0, 0, null, 30, 'mid', { hs: 18, bs: 10, push: 0.05, poison: 150 }), ex: { vx: 0.36, dmg: 45, poison: 360 } },
   crows: { vx: 0, y: 4.0, vy: -0.15, delay: 16, box: [-0.4, -0.5, 0.4, 0.5], life: 40, clash: false, fx: 'crows',
     hit: hit(0, 0, null, 62, 'overhead', { hs: 24, bs: 14, push: 0.04, heavy: true }), ex: { dmg: 90 }, exSpread: true },
 };
@@ -446,7 +446,7 @@ export const CHARACTERS = {
   lilith: {
     id: 'lilith', name: 'Lilith', title: 'a Bruxa Carmesim',
     bio: 'Feiticeira de controle de espaço: lanças, teletransporte, clones e regeneração limitada.',
-    height: 1.8, walkF: 0.056, walkB: 0.05, jumpVX: 0.072,
+    height: 1.8, walkF: 0.055, walkB: 0.047, jumpVX: 0.072,
     moves: lilithMoves, projectiles: lilithProj,
     specials: [
       { move: 'lanca', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -480,7 +480,7 @@ export const CHARACTERS = {
   kazuro: {
     id: 'kazuro', name: 'Kazuro', title: 'o Samurai Amaldiçoado', proposalNames: true,
     bio: 'Espadachim veloz possuído por uma entidade demoníaca. Cortes espectrais, contra-ataques, investidas e duplicatas.',
-    height: 1.85, walkF: 0.055, walkB: 0.048, jumpVX: 0.072,
+    height: 1.85, walkF: 0.057, walkB: 0.048, jumpVX: 0.072,
     moves: kazuroMoves, projectiles: kazuroProj,
     specials: [
       { move: 'corte_espectral', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -515,7 +515,7 @@ export const CHARACTERS = {
   brakkor: {
     id: 'brakkor', name: 'Brakkor', title: 'o Devorador', proposalNames: true,
     bio: 'Demônio gigante e lento que esmaga com agarrões, fogo infernal, terremotos e investidas que não se detêm.',
-    height: 2.35, width: 1.2, walkF: 0.041, walkB: 0.032, jumpVX: 0.055,
+    height: 2.35, width: 1.2, walkF: 0.045, walkB: 0.032, jumpVX: 0.055,
     moves: brakkorMoves, projectiles: brakkorProj,
     specials: [
       { move: 'bola_fogo', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -549,7 +549,7 @@ export const CHARACTERS = {
   nymera: {
     id: 'nymera', name: 'Nymera', title: 'a Rainha Glacial', proposalNames: true,
     bio: 'Assassina de gelo que controla o espaço: lanças e espinhos glaciais, armadilhas que congelam e clones de gelo que punem quem ataca.',
-    height: 1.78, walkF: 0.057, walkB: 0.05, jumpVX: 0.074,
+    height: 1.78, walkF: 0.055, walkB: 0.05, jumpVX: 0.074,
     moves: nymeraMoves, projectiles: nymeraProj,
     specials: [
       { move: 'lanca_gelo', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -562,7 +562,7 @@ export const CHARACTERS = {
       { move: 'passo_glacial', cmd: SPECIAL_CMDS.ddK },
     ],
     superMove: 'inverno_eterno', superMove2: 'tumulo_gelo',
-    throwName: 'Abraço Glacial', throwDmg: 100,
+    throwName: 'Abraço Glacial', throwDmg: 95,
     transform: 'Coroa Glacial',
     winPose: 'winNymera', aura: 0x80d8ff, magicSfx: true, superRange: 2.3, clonePose: 'parry_s',
     combos: [
@@ -579,12 +579,12 @@ export const CHARACTERS = {
       { id: 'prisao_cristalina', name: 'Prisão Cristalina', motion: [2, 2, 6], btn: 'lk', range: [1.2, 4.0], label: '↓ ↓ → + U (média)', simple: 'b', proposal: true },
     ],
     ai: { preferred: 2.8, zoning: 0.55, aggression: 0.55, specials: ['lanca_gelo', 'espinhos_gelo', 'armadilha', 'deslize', 'garra_inverno', 'nevasca', 'clone_gelo', 'passo_glacial'],
-      close: ['nevasca', 'deslize', 'garra_inverno', 'clone_gelo'], long: ['lanca_gelo', 'espinhos_gelo', 'armadilha', 'lanca_gelo', 'passo_glacial'], counter: 'clone_gelo', antiAir: 'garra_inverno' },
+      close: ['nevasca', 'deslize', 'garra_inverno', 'clone_gelo'], long: ['lanca_gelo', 'espinhos_gelo', 'armadilha', 'lanca_gelo'], counter: 'clone_gelo', antiAir: 'garra_inverno' },
   },
   pestilus: {
     id: 'pestilus', name: 'Pestilus', title: 'o Médico da Peste', proposalNames: true,
     bio: 'Alquimista corrompido que domina a área: bombas tóxicas, nuvens corrosivas, veneno que consome aos poucos e enxames de ratos e corvos.',
-    height: 1.9, walkF: 0.048, walkB: 0.042, jumpVX: 0.064,
+    height: 1.9, walkF: 0.046, walkB: 0.042, jumpVX: 0.064,
     moves: pestilusMoves, projectiles: pestilusProj,
     specials: [
       { move: 'bomba_toxica', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
