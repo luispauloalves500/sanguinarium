@@ -132,3 +132,24 @@ body.touch .pause-btn { display: block; }
 }
 
 #hud.cine .hud-top, #hud.cine .hud-bottom, #hud.cine .combo { opacity: 0; transition: opacity .4s; }
+
+#fps { position: fixed; right: 8px; bottom: 6px; z-index: 50; font: 12px monospace; color: #e8c070; background: rgba(0,0,0,.5); padding: 2px 6px; pointer-events: none; }
+
+/* v0.2: arenas interativas */
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 7; }
+.hint { position: absolute; bottom: 64px; font-size: 13px; letter-spacing: 1px; color: #ffcf80; background: rgba(20,0,0,.6); border: 1px solid #7a1a10; padding: 3px 8px; border-radius: 3px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.hint.h1 { left: 3%; } .hint.h2 { right: 3%; }
+.hint.on { opacity: 1; }
+.stage-name { position: absolute; top: 64px; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: 4px; color: #d8a0a0; opacity: .0; text-shadow: 0 0 6px #000; transition: opacity .6s; }
+.stage-name.on { opacity: .85; }
+#hud.cine .hint, #hud.cine .stage-name { opacity: 0; }
+@media (max-width: 760px) { .hint { bottom: auto; top: 86px; font-size: 11px; } }
+
+.opt-sub { margin: 14px 0 6px; font-size: 13px; letter-spacing: 3px; color: #d88; text-align: center; }
+.keymap button { min-width: 120px; }
+.keymap button.wait { color: #ffd070; border-color: #ffd070; animation: blink 1s infinite; }
+.ending p { font-size: 17px; line-height: 1.6; max-width: 640px; margin: 10px auto; }
+.ending .sig { color: #c88; font-size: 13px; letter-spacing: 2px; }
+.ladder { list-style: none; padding: 0; margin: 8px 0; text-align: left; }
+.ladder li { padding: 6px 8px; border-bottom: 1px solid #3a1010; font-size: 14px; }
+.ladder li b { color: #ffcf80; }

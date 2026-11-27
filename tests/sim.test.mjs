@@ -20,7 +20,9 @@ test('dados de golpes: todos os golpes têm quadros válidos e caixas coerentes'
       for (const c of m.cancel) if (!['special', 'super'].includes(c)) assert.ok(ch.moves[c], `${ch.id}.${m.id} cancela para golpe inexistente ${c}`);
     }
     assert.equal(ch.specials.length, 8, `${ch.id} tem 8 especiais`);
-    assert.equal(ch.fatalities.length, 2, `${ch.id} tem 2 fatalidades`);
+    assert.equal(ch.fatalities.length, 4, `${ch.id} tem 4 fatalidades`);
+    assert.ok(ch.superMove2 && ch.moves[ch.superMove2].kind === 'super', `${ch.id} tem 2º supergolpe`);
+    assert.equal(new Set(ch.fatalities.map((f) => f.simple)).size, 4, 'atalhos ESP distintos');
     for (const s of ch.specials) assert.ok(ch.moves[s.move], `${ch.id} especial ${s.move}`);
   }
 });
@@ -263,6 +265,10 @@ for (const [ch, fat, dist, inputs] of [
   ['varkhan', 'machado_condenacao', 3.2, [L, L, 0, R, R, 0, L, L | BTN.hk]],
   ['lilith', 'explosao_carmesim', 2.5, [D, D, D | R, R, 0, R | BTN.hp]],
   ['lilith', 'ritual_proibido', 1.5, [L, L, 0, L, L, D, D | BTN.hk]],
+  ['varkhan', 'correntes_suplicio', 2.4, [R, R, 0, L, L, 0, R, R | BTN.lp]],
+  ['varkhan', 'ruptura_infernal', 1.2, [D, D, 0, D, D, 0, D, D | BTN.lk]],
+  ['lilith', 'beijo_morte', 1.2, [R, R, 0, R, R, D, D | BTN.lp]],
+  ['lilith', 'chuva_final', 3.4, [L, L, D, D, L, L | BTN.lk]],
 ]) {
   test(`fatalidade ${fat}: comando validado na distância e retorno ao fim da partida`, () => {
     const m = toFinish(ch, ch === 'varkhan' ? 'lilith' : 'varkhan');
@@ -340,4 +346,136 @@ test('U+I com 1–2 quadros de diferença ainda sai supergolpe (tolerância de e
   m.step([BTN.lk, 0]); m.step([BTN.lk, 0]); m.step([BTN.lk | BTN.hk, 0]);
   assert.equal(m.fighters[0].move && m.fighters[0].move.kind, 'super');
   assert.equal(m.fighters[0].meter, 100);
+});
+
+test('2º supergolpe: ↓ + U+I sai o supergolpe 2 (2 barras) e a cinemática termina devolvendo o controle', () => {
+  for (const [ch, op, id] of [['varkhan', 'lilith', 'tribunal'], ['lilith', 'varkhan', 'saba']]) {
+    const m = fightReady({ p1: ch, p2: op }); place(m, 0, 1.4);
+    m.fighters[0].meter = 250;
+    m.step([BTN.down, 0]); m.step([BTN.down | BTN.lk | BTN.hk, 0]);
+    assert.equal(m.fighters[0].move && m.fighters[0].move.id, id);
+    assert.equal(m.fighters[0].meter, 50);
+    let cine = false;
+    for (let i = 0; i < 400 && m.phase === 'fight'; i++) { m.step([0, 0]); if (m.cine) cine = true; if (!m.cine && cine) break; }
+    assert.ok(cine, `${id} iniciou a cinemática`);
+    assert.ok(m.fighters[1].hp < 1000 - 250, `${id} causou dano (${m.fighters[1].hp})`);
+    run(m, 120);
+    assert.notEqual(m.fighters[0].state, 'cinematic');
+  }
+});
+
+test('Sabá Sangrento é golpe baixo: defesa em pé não segura, agachada segura', () => {
+  const m = fightReady({ p1: 'lilith', p2: 'varkhan' }); place(m, 0, 1.4);
+  m.fighters[0].meter = 200;
+  m.step([BTN.down, BTN.block]); m.step([BTN.down | BTN.lk | BTN.hk, BTN.block | BTN.down]);
+  for (let i = 0; i < 40; i++) m.step([0, BTN.block | BTN.down]);
+  assert.ok(!m.cine, 'agachado bloqueou');
+});
+
+test('ESP + direção escolhe a fatalidade simplificada (n, ↓, →, ←)', () => {
+  const ids = [];
+  for (const dir of [0, D, R, L]) {
+    const m = toFinish('lilith', 'varkhan');
+    const [a, b] = m.fighters; a.facing = 1;
+    const fat = a.ch.fatalities.find((f) => f.simple === { 0: 'n', [D]: 'd', [R]: 'f', [L]: 'b' }[dir]);
+    a.x = b.x - (fat.range[0] + Math.min(fat.range[1], 4)) / 2;
+    m.step([dir, 0]); m.step([dir | BTN.special, 0]);
+    ids.push(m.fatal && m.fatal.id);
+  }
+  assert.deepEqual(ids, ['explosao_carmesim', 'ritual_proibido', 'beijo_morte', 'chuva_final']);
+});
+
+// ---------------------------------------------------------------- CP10: arenas interativas
+test('Coliseu: golpe pesado que derruba na borda leva ao Fosso (transição única, dano extra, luta continua)', () => {
+  const m = fightReady({ arena: 'coliseu' });
+  place(m, 5.9, 6.95);
+  const hp0 = m.fighters[1].hp;
+  seq(m, 0, [[D | BTN.hk, 2], [D, 14]]);
+  assert.equal(m.phase, 'transition');
+  const evs = m.drainEvents();
+  assert.ok(evs.some((e) => e.type === 'transition' && e.to === 'Fosso do Coliseu'));
+  run(m, 160);
+  assert.equal(m.phase, 'fight');
+  assert.equal(m.stage.area, 1);
+  assert.ok(hp0 - m.fighters[1].hp >= 65 + 70, 'dano do golpe + transição');
+  assert.ok(Math.abs(m.fighters[0].x) < 3 && Math.abs(m.fighters[1].x) < 3, 'reposicionados no novo cenário');
+  // segunda vez na borda: não há nova transição (uma por luta)
+  run(m, 80);
+  place(m, 5.9, 6.95);
+  seq(m, 0, [[D | BTN.hk, 2], [D, 14]]);
+  assert.notEqual(m.phase, 'transition');
+});
+
+test('Perigo de borda (Poço de Lava): derrubar perto da borda causa dano extra com recarga', () => {
+  const m = fightReady({ arena: 'coliseu' });
+  place(m, 5.7, 6.72);
+  m.stage.transUsed = true;
+  const hp0 = m.fighters[1].hp;
+  seq(m, 0, [[D | BTN.hk, 2], [D, 14]]);
+  const evs = m.drainEvents();
+  const hz = evs.find((e) => e.type === 'hazard');
+  assert.ok(hz && hz.kind === 'lava' && hz.dmg === 50, 'evento de perigo');
+  assert.equal(hp0 - m.fighters[1].hp, 65 + 50);
+});
+
+test('Perigos desligados: sem transição, sem perigo, ↑+O vira pulo/agarrão comum', () => {
+  const m = fightReady({ arena: 'coliseu', hazards: false });
+  place(m, 5.9, 6.95);
+  const hp0 = m.fighters[1].hp;
+  seq(m, 0, [[D | BTN.hk, 2], [D, 14]]);
+  assert.notEqual(m.phase, 'transition');
+  assert.equal(hp0 - m.fighters[1].hp, 65);
+  assert.ok(!m.drainEvents().some((e) => e.type === 'hazard' || e.type === 'transition'));
+});
+
+test('Coliseu: ↑+O de costas para o muro salta pela Corrente do Muro e cai atrás do oponente', () => {
+  const m = fightReady({ arena: 'coliseu' });
+  place(m, -7.1, -5.9);
+  seq(m, 0, [[U | BTN.grab, 2], [0, 60]]);
+  const [a, b] = m.fighters;
+  assert.ok(a.x > b.x, `P1 cruzou para o outro lado (${a.x.toFixed(2)} > ${b.x.toFixed(2)})`);
+  assert.ok(m.drainEvents().some((e) => e.type === 'interact' && e.kind === 'vault'));
+  assert.equal(a.facing, -1, 'virou para o oponente');
+  assert.ok(['idle', 'crouch', 'walk'].includes(a.state));
+});
+
+test('Catedral: ↑+O na borda derruba a Estátua do Carrasco (alto: acerta agachado, bloqueável em pé), uma por lado/round', () => {
+  // longe da borda o ↑+O não ativa nada
+  const m = fightReady({ arena: 'catedral' });
+  place(m, 7.1, 4.6);
+  const hp0 = m.fighters[0].hp;
+  seq(m, 1, [[U | BTN.grab, 2], [0, 50]]);
+  assert.equal(m.fighters[0].hp, hp0);
+  assert.ok(!m.drainEvents().some((e) => e.type === 'interact'));
+  const m2 = fightReady({ arena: 'catedral' });
+  place(m2, 7.1, 4.6);
+  const h2 = m2.fighters[1].hp;
+  for (let i = 0; i < 2; i++) m2.step([U | BTN.grab, D]);
+  for (let i = 0; i < 50; i++) m2.step([0, D]);
+  assert.equal(h2 - m2.fighters[1].hp, 90, 'agachado leva o golpe alto da estátua');
+  assert.equal(m2.stage.statues[1], 'down');
+  run(m2, 120);
+  place(m2, 7.1, 4.6);
+  const h3 = m2.fighters[1].hp;
+  seq(m2, 0, [[U | BTN.grab, 2], [0, 50]]);
+  assert.equal(m2.fighters[1].hp, h3, 'estátua já caída: nada acontece');
+  // bloqueio em pé segura
+  const m3 = fightReady({ arena: 'catedral' });
+  place(m3, -7.1, -4.6);
+  const h4 = m3.fighters[1].hp;
+  for (let i = 0; i < 2; i++) m3.step([U | BTN.grab, BTN.block]);
+  for (let i = 0; i < 50; i++) m3.step([0, BTN.block]);
+  assert.equal(m3.fighters[1].hp, h4, 'defesa em pé bloqueia');
+  assert.ok(m3.drainEvents().some((e) => e.type === 'block'));
+});
+
+test('simulação determinística com arenas interativas (transição incluída)', () => {
+  const go = () => {
+    const m = fightReady({ arena: 'catedral' });
+    place(m, 5.9, 6.95);
+    seq(m, 0, [[D | BTN.hk, 2], [D, 14]]);
+    run(m, 300, (i) => (i % 17 === 0 ? BTN.lp : i % 23 === 0 ? (U | BTN.grab) : BTN.right), (i) => (i % 13 === 0 ? BTN.hk : BTN.left));
+    return m.snapshot() + m.stage.area;
+  };
+  assert.equal(go(), go());
 });

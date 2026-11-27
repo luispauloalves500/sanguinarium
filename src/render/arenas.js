@@ -8,8 +8,13 @@ function add(g, geo, mat, pos, rot = [0, 0, 0], shadow = { cast: false, receive:
   m.castShadow = shadow.cast; m.receiveShadow = shadow.receive; g.add(m); return m;
 }
 
-export function buildArena(id, scene, quality) {
-  return id === 'catedral' ? catedral(scene, quality) : coliseu(scene, quality);
+// area 0 = cenário principal; area 1 = cenário após a transição (Fosso do Coliseu / Cripta Profana)
+export function buildArena(id, scene, quality, area = 0) {
+  let a;
+  if (id === 'catedral') a = area ? cripta(scene, quality) : catedral(scene, quality);
+  else a = area ? fosso(scene, quality) : coliseu(scene, quality);
+  a.area = area;
+  return a;
 }
 
 function coliseu(scene, quality) {
@@ -86,7 +91,10 @@ function coliseu(scene, quality) {
   const key = new THREE.DirectionalLight(0xffc0a0, 2.2); key.position.set(4, 10, 7); key.castShadow = quality !== 'baixa';
   setupShadow(key); g.add(key); g.add(key.target);
   const rim = new THREE.DirectionalLight(0xff2010, 1.6); rim.position.set(-6, 5, -8); g.add(rim);
-  return { group: g, id: 'coliseu', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: (k) => { excite = Math.min(1.5, excite + k); }, emberColor: 0xff6a20, bloodTint: 1 };
+  const edges = edgeChains(g, updaters, pillarMat);
+  const vents = edgeVents(g, updaters, 'lava');
+  return { group: g, id: 'coliseu', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: (k) => { excite = Math.min(1.5, excite + k); }, emberColor: 0xff6a20, bloodTint: 1,
+    onEvent: (e) => { if (e.type === 'interact' && e.kind === 'vault') edges.swing(e.side); if (e.type === 'hazard') vents.erupt(e.side); }, sync: () => {} };
 }
 
 function catedral(scene, quality) {
@@ -152,7 +160,9 @@ function catedral(scene, quality) {
     // asas de pedra
     add(s, new THREE.BoxGeometry(0.1, 1.8, 0.9), statueMat, [x > 0 ? -0.45 : 0.45, 3.0, -0.3], [0.2, 0, x > 0 ? 0.5 : -0.5]);
     add(s, new THREE.BoxGeometry(0.1, 1.8, 0.9), statueMat, [x > 0 ? 0.45 : -0.45, 3.0, -0.3], [0.2, 0, x > 0 ? -0.5 : 0.5]);
-    const eye = new THREE.PointLight(0xff2020, 2.5, 3); eye.position.set(0, 3.95, 0.5); s.add(eye);
+    // olhos da estátua: brilho aditivo (sem luz real, mais leve)
+    const eyeG = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('#ff2020'), blending: THREE.AdditiveBlending, depthWrite: false }));
+    eyeG.position.set(0, 3.92, 0.32); eyeG.scale.set(0.7, 0.35, 1); s.add(eyeG);
   }
   // luzes
   g.add(new THREE.HemisphereLight(0x8070c0, 0x100810, 0.8));
@@ -160,7 +170,10 @@ function catedral(scene, quality) {
   setupShadow(key); g.add(key); g.add(key.target);
   const red = new THREE.PointLight(0xff2030, 10, 14, 1.4); red.position.set(0, 4, -3); g.add(red);
   updaters.push((dt, t) => { lights.forEach((b, i) => { b.material.opacity = 0.045 + Math.sin(t * 0.7 + i) * 0.015; }); });
-  return { group: g, id: 'catedral', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: () => {}, emberColor: 0x9070ff, bloodTint: 1 };
+  const statues = edgeStatues(g, updaters, colMat, statueMat);
+  const vents = edgeVents(g, updaters, 'brasa');
+  return { group: g, id: 'catedral', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: () => {}, emberColor: 0x9070ff, bloodTint: 1,
+    onEvent: (e) => { if (e.type === 'hazard') vents.erupt(e.side); }, sync: (st) => statues.sync(st) };
 }
 
 function setupShadow(l) {
@@ -168,3 +181,248 @@ function setupShadow(l) {
   const c = l.shadow.camera; c.left = -10; c.right = 10; c.top = 8; c.bottom = -4; c.near = 1; c.far = 30;
   l.shadow.bias = -0.0008;
 }
+
+// ------------------------------------------------------------------ elementos interativos de borda
+// Corrente do Muro (Coliseu/Fosso): poste com corrente pendurada em cada borda; balança ao ser usada.
+function edgeChains(g, updaters, postMat) {
+  const iron = std(0x3a3a40, { metalness: 0.85, roughness: 0.35 });
+  const linkGeo = new THREE.TorusGeometry(0.075, 0.022, 5, 10);
+  const swings = {};
+  for (const side of [-1, 1]) {
+    const x = side * 8.35, z = -0.9;
+    add(g, new THREE.BoxGeometry(0.32, 3.8, 0.32), postMat, [x, 1.9, z], [0, 0, 0], { cast: true, receive: true });
+    add(g, new THREE.BoxGeometry(1.25, 0.22, 0.24), postMat, [x - side * 0.5, 3.7, z]);
+    add(g, new THREE.SphereGeometry(0.17, 8, 6), std(0xd8c8a8, { roughness: 0.7 }), [x, 3.98, z]); // caveira no topo
+    const pivot = new THREE.Group(); pivot.position.set(x - side * 0.95, 3.6, z); g.add(pivot);
+    for (let i = 0; i < 11; i++) {
+      const l = new THREE.Mesh(linkGeo, iron); l.position.y = -0.13 * i - 0.08; l.rotation.y = i % 2 ? Math.PI / 2 : 0; pivot.add(l);
+    }
+    const hook = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 5, 10, Math.PI * 1.4), iron); hook.position.y = -1.55; hook.rotation.z = Math.PI * 0.8; pivot.add(hook);
+    swings[side] = { pivot, t: 99, amp: 0 };
+  }
+  updaters.push((dt, t) => {
+    for (const side of [-1, 1]) {
+      const s = swings[side]; s.t += dt;
+      const a = s.amp * Math.exp(-s.t * 1.4) * Math.sin(s.t * 5.5);
+      s.pivot.rotation.z = a + Math.sin(t * 0.9 + side) * 0.03;
+    }
+  });
+  return { swing: (side) => { const s = swings[side]; if (s) { s.t = 0; s.amp = 0.9 * -side; } } };
+}
+
+// Perigo de borda: poço de lava (Coliseu) ou braseiro (Catedral). Entra em erupção no evento 'hazard'.
+function edgeVents(g, updaters, kind) {
+  const lava = kind === 'lava';
+  const tex = lavaTexture();
+  const mat = new THREE.MeshBasicMaterial({ map: tex, color: lava ? 0xffffff : 0xffb070 });
+  const fireMat = new THREE.SpriteMaterial({ map: glowSprite(lava ? '#ff5010' : '#ff8a30'), blending: THREE.AdditiveBlending, depthWrite: false });
+  const vents = {};
+  for (const side of [-1, 1]) {
+    const x = side * 8.85, z = 0.35;
+    if (lava) {
+      add(g, new THREE.CircleGeometry(0.85, 20), mat, [x, 0.035, z], [-Math.PI / 2, 0, 0]);
+      add(g, new THREE.TorusGeometry(0.85, 0.12, 6, 20), std(0x1a0c08), [x, 0.07, z], [-Math.PI / 2, 0, 0]);
+      for (let i = 0; i < 4; i++) add(g, new THREE.BoxGeometry(1.6, 0.06, 0.07), std(0x222222, { metalness: 0.7 }), [x, 0.1, z - 0.5 + i * 0.33]); // grade
+    } else {
+      const bowl = std(0x2a2226, { metalness: 0.8, roughness: 0.4 });
+      add(g, new THREE.CylinderGeometry(0.55, 0.3, 0.45, 12, 1, true), bowl, [x, 1.05, z]);
+      add(g, new THREE.CircleGeometry(0.5, 12), mat, [x, 1.2, z], [-Math.PI / 2, 0, 0]);
+      for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2; add(g, new THREE.CylinderGeometry(0.04, 0.05, 1.0, 5), bowl, [x + Math.cos(a) * 0.25, 0.45, z + Math.sin(a) * 0.25], [Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25]); }
+    }
+    const fy = lava ? 0.4 : 1.55;
+    const fire = new THREE.Sprite(fireMat); fire.position.set(x, fy, z); fire.scale.set(1.4, 1.0, 1); g.add(fire);
+    const column = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite(lava ? '#ff4008' : '#ff7020'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
+    column.position.set(x, fy + 1.6, z); column.scale.set(1.8, 4.5, 1); g.add(column);
+    vents[side] = { fire, column, t: 99, fy };
+  }
+  updaters.push((dt, t) => {
+    tex.offset.x += dt * 0.03; tex.offset.y += dt * 0.02;
+    for (const side of [-1, 1]) {
+      const v = vents[side]; v.t += dt;
+      const k = v.t < 0.9 ? Math.sin((v.t / 0.9) * Math.PI) : 0;
+      v.fire.scale.set(1.4 + k * 1.2, 1.0 + Math.sin(t * 13 + side) * 0.15 + k * 2, 1);
+      v.column.material.opacity = k * 0.95; v.column.scale.set(1.6 + k * 0.8, 1 + k * 5, 1); v.column.position.y = v.fy + 0.5 + k * 2.4;
+    }
+  });
+  return { erupt: (side) => { const v = vents[side]; if (v) v.t = 0; } };
+}
+
+// Estátua do Carrasco (Catedral/Cripta): tomba em direção ao centro quando ativada.
+function edgeStatues(g, updaters, baseMat, stoneMat) {
+  const statues = {};
+  const THETA = 1.72;
+  for (const side of [-1, 1]) {
+    const x = side * 8.4, z = -0.55;
+    add(g, new THREE.BoxGeometry(1.3, 0.8, 1.3), baseMat, [x, 0.4, z], [0, 0, 0], { cast: true, receive: true });
+    const pivot = new THREE.Group(); pivot.position.set(x - side * 0.55, 0.8, z); g.add(pivot);
+    const fig = new THREE.Group(); fig.position.x = side * 0.55; pivot.add(fig);
+    add(fig, new THREE.ConeGeometry(0.62, 2.7, 10), stoneMat, [0, 1.35, 0], [0, 0, 0], { cast: true, receive: true }); // manto
+    add(fig, new THREE.CylinderGeometry(0.34, 0.5, 0.9, 10), stoneMat, [0, 2.45, 0]); // ombros
+    add(fig, new THREE.ConeGeometry(0.36, 0.95, 10), stoneMat, [0, 3.25, -0.02]); // capuz
+    add(fig, new THREE.SphereGeometry(0.22, 10, 8), std(0x18161c), [0, 3.0, 0.14]); // rosto vazio
+    const eye = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('#ff2020'), blending: THREE.AdditiveBlending, depthWrite: false }));
+    eye.position.set(0, 3.02, 0.36); eye.scale.set(0.55, 0.25, 1); fig.add(eye);
+    // machado de pedra apoiado no ombro, lâmina voltada para o centro
+    const axe = new THREE.Group(); axe.position.set(-side * 0.3, 2.3, 0.35); axe.rotation.z = side * 0.35; fig.add(axe);
+    add(axe, new THREE.CylinderGeometry(0.05, 0.05, 2.2, 6), stoneMat, [0, 0.1, 0]);
+    add(axe, new THREE.BoxGeometry(0.75, 0.6, 0.08), stoneMat, [-side * 0.35, 1.0, 0]);
+    statues[side] = { pivot, eye, cur: 0 };
+  }
+  const st0 = { state: 'up', f: 0 };
+  let last = { '-1': st0, '1': st0 };
+  updaters.push((dt) => {
+    for (const side of [-1, 1]) {
+      const s = statues[side], L = last[side];
+      let target = 0;
+      if (L.state === 'falling') { const k = Math.min(1, L.f / 36); target = THETA * k * k; }
+      else if (L.state === 'down') target = THETA;
+      s.cur += (target - s.cur) * (L.state === 'up' ? 0.08 : 0.6);
+      s.pivot.rotation.z = side * s.cur;
+      s.eye.visible = s.cur < 0.2;
+    }
+  });
+  return {
+    sync(st) {
+      if (!st) return;
+      for (const side of [-1, 1]) {
+        const act = st.statueAct && st.statueAct.find((a) => a.side === side);
+        last[side] = { state: st.statues[side], f: act ? act.f : 0 };
+      }
+    },
+  };
+}
+
+// ------------------------------------------------------------------ Fosso do Coliseu (após a transição)
+function fosso(scene, quality) {
+  const g = new THREE.Group(); scene.add(g);
+  scene.background = new THREE.Color(0x0c0202);
+  scene.fog = new THREE.Fog(0x220402, 11, 32);
+  const updaters = [];
+  const rockTex = stoneWallTexture('#2a1a16', '#0a0504'); rockTex.repeat.set(8, 4);
+  add(g, new THREE.PlaneGeometry(40, 18), std(0x8a6a60, { map: rockTex, roughness: 0.95 }), [0, 0, -2], [-Math.PI / 2, 0, 0]).name = 'floor';
+  const lavaTex = lavaTexture();
+  const lavaMat = new THREE.MeshBasicMaterial({ map: lavaTex });
+  // rio de lava ao fundo e rachaduras no chão
+  add(g, new THREE.PlaneGeometry(44, 2.6), lavaMat, [0, 0.02, -5.6], [-Math.PI / 2, 0, 0]);
+  for (const [x, z, w, r] of [[-5, -2.6, 3.2, 0.3], [3.5, -3.1, 2.6, -0.4], [-1, -3.8, 2.2, 0.1], [6.5, -2.2, 1.8, 0.7]]) add(g, new THREE.PlaneGeometry(w, 0.09), lavaMat, [x, 0.012, z], [-Math.PI / 2, 0, r]);
+  // paredes do fosso com cascatas de lava
+  const wallTex = stoneWallTexture('#24140f', '#090403'); wallTex.repeat.set(8, 3);
+  const wallMat = std(0xffffff, { map: wallTex, roughness: 0.95 });
+  add(g, new THREE.PlaneGeometry(44, 14), wallMat, [0, 7, -7]);
+  add(g, new THREE.PlaneGeometry(14, 14), wallMat, [-13, 7, -1], [0, Math.PI / 2, 0]);
+  add(g, new THREE.PlaneGeometry(14, 14), wallMat, [13, 7, -1], [0, -Math.PI / 2, 0]);
+  const fallTex = lavaTexture(); fallTex.repeat.set(1, 3);
+  const fallMat = new THREE.MeshBasicMaterial({ map: fallTex });
+  for (const x of [-7.5, 0.5, 8]) {
+    add(g, new THREE.PlaneGeometry(1.4, 12), fallMat, [x, 6, -6.9]);
+    const pl = new THREE.PointLight(0xff4a10, 16, 10, 1.6); pl.position.set(x, 1.5, -5); g.add(pl);
+    updaters.push((dt, t) => { pl.intensity = 14 + Math.sin(t * 6 + x) * 3; });
+  }
+  updaters.push((dt) => { lavaTex.offset.x += dt * 0.03; fallTex.offset.y += dt * 0.5; });
+  // gaiolas penduradas
+  const iron = std(0x2c2c30, { metalness: 0.85, roughness: 0.4 });
+  const cages = [];
+  for (const [x, z, y] of [[-4.5, -3.4, 4.2], [2.8, -3.8, 4.8], [9.5, -3.0, 4.4]]) {
+    const c = new THREE.Group(); c.position.set(x, y, z); g.add(c);
+    for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; add(c, new THREE.CylinderGeometry(0.025, 0.025, 1.6, 4), iron, [Math.cos(a) * 0.45, 0, Math.sin(a) * 0.45]); }
+    add(c, new THREE.CylinderGeometry(0.5, 0.5, 0.06, 10), iron, [0, -0.8, 0]);
+    add(c, new THREE.ConeGeometry(0.52, 0.4, 10), iron, [0, 1.0, 0]);
+    add(c, new THREE.CylinderGeometry(0.02, 0.02, 6, 4), iron, [0, 4.2, 0]);
+    add(c, new THREE.SphereGeometry(0.16, 8, 6), std(0xd0c0a0), [0.1, -0.6, 0.1]); // caveira do prisioneiro
+    cages.push(c);
+  }
+  updaters.push((dt, t) => cages.forEach((c, i) => { c.rotation.z = Math.sin(t * 0.8 + i * 2) * 0.05; c.rotation.y += dt * 0.1; }));
+  // ossos espalhados
+  const bone = std(0xcfc2a4, { roughness: 0.7 });
+  const rnd = mulberry(7);
+  for (let i = 0; i < 18; i++) {
+    const x = (rnd() - 0.5) * 22, z = -2 - rnd() * 3;
+    if (rnd() < 0.35) add(g, new THREE.SphereGeometry(0.13, 7, 5), bone, [x, 0.1, z]);
+    else add(g, new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5), bone, [x, 0.04, z], [Math.PI / 2, rnd() * 3, 0]);
+  }
+  const postMat = std(0x3a2a26, { map: stoneWallTexture('#3a2a26', '#1a100c') });
+  const edges = edgeChains(g, updaters, postMat);
+  const vents = edgeVents(g, updaters, 'lava');
+  g.add(new THREE.HemisphereLight(0xff8060, 0x1a0202, 0.75));
+  const key = new THREE.DirectionalLight(0xffb090, 1.7); key.position.set(3, 10, 7); key.castShadow = quality !== 'baixa';
+  setupShadow(key); g.add(key); g.add(key.target);
+  const rim = new THREE.DirectionalLight(0xff3010, 1.8); rim.position.set(0, 3, -8); g.add(rim);
+  return { group: g, id: 'coliseu', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: () => {}, emberColor: 0xff7a20, bloodTint: 1,
+    onEvent: (e) => { if (e.type === 'interact' && e.kind === 'vault') edges.swing(e.side); if (e.type === 'hazard') vents.erupt(e.side); }, sync: () => {} };
+}
+
+// ------------------------------------------------------------------ Cripta Profana (após a transição)
+function cripta(scene, quality) {
+  const g = new THREE.Group(); scene.add(g);
+  scene.background = new THREE.Color(0x040307);
+  scene.fog = new THREE.Fog(0x0c0814, 10, 30);
+  const updaters = [];
+  add(g, new THREE.PlaneGeometry(40, 18), std(0x8a8098, { map: tileTexture(), roughness: 0.55, metalness: 0.15 }), [0, 0, -2], [-Math.PI / 2, 0, 0]).name = 'floor';
+  const wallTex = stoneWallTexture('#26222c', '#0c0a10'); wallTex.repeat.set(7, 2);
+  const wallMat = std(0xffffff, { map: wallTex, roughness: 0.9 });
+  add(g, new THREE.PlaneGeometry(40, 8), wallMat, [0, 4, -6.5]);
+  add(g, new THREE.PlaneGeometry(14, 8), wallMat, [-13, 4, -1], [0, Math.PI / 2, 0]);
+  add(g, new THREE.PlaneGeometry(14, 8), wallMat, [13, 4, -1], [0, -Math.PI / 2, 0]);
+  add(g, new THREE.PlaneGeometry(40, 14), std(0x1a1720, { side: THREE.DoubleSide }), [0, 6.6, -1], [Math.PI / 2, 0, 0]); // teto baixo
+  // arcos góticos
+  const archMat = std(0x34303a, { roughness: 0.8 });
+  for (let i = -3; i <= 3; i++) {
+    const x = i * 4;
+    add(g, new THREE.TorusGeometry(2.0, 0.22, 6, 14, Math.PI), archMat, [x, 4.4, -6.2]);
+    add(g, new THREE.BoxGeometry(0.5, 4.4, 0.5), archMat, [x - 2, 2.2, -6.2], [0, 0, 0], { cast: true, receive: true });
+  }
+  // nichos de caveiras (instanciadas)
+  const nSk = quality === 'baixa' ? 60 : 140;
+  const skulls = new THREE.InstancedMesh(new THREE.SphereGeometry(0.14, 7, 5), std(0xc9bc9c, { roughness: 0.75 }), nSk);
+  const m4 = new THREE.Matrix4(); const rnd = mulberry(11); const q4 = new THREE.Quaternion(), e4 = new THREE.Euler(), sc4 = new THREE.Vector3(), p4 = new THREE.Vector3();
+  for (let i = 0; i < nSk; i++) {
+    // pilhas irregulares dentro dos nichos entre os arcos
+    const niche = Math.floor(rnd() * 7) - 3, nx = niche * 4 + 0.2;
+    const row = Math.floor(rnd() * 5);
+    p4.set(nx + (rnd() - 0.5) * 2.6, 0.25 + row * 0.42 + rnd() * 0.12, -6.3 + rnd() * 0.15);
+    e4.set((rnd() - 0.5) * 0.6, (rnd() - 0.5) * 1.2, (rnd() - 0.5) * 0.5); q4.setFromEuler(e4);
+    const k = 0.8 + rnd() * 0.5; sc4.set(k, k * 0.9, k);
+    skulls.setMatrixAt(i, m4.compose(p4, q4, sc4));
+  }
+  g.add(skulls);
+  // sarcófagos
+  const sarc = std(0x3c3842, { roughness: 0.6 });
+  for (const x of [-4.2, 4.2]) {
+    add(g, new THREE.BoxGeometry(2.4, 0.8, 1.0), sarc, [x, 0.4, -4.6], [0, 0, 0], { cast: true, receive: true });
+    const lid = add(g, new THREE.BoxGeometry(2.5, 0.16, 1.1), std(0x48444e), [x, 0.88, -4.6], [0, x > 0 ? 0.25 : -0.2, 0]);
+    lid.castShadow = true;
+    add(g, new THREE.BoxGeometry(0.1, 0.02, 0.6), std(0x8a7030, { metalness: 0.8, roughness: 0.3 }), [x, 0.97, -4.6], [0, x > 0 ? 0.25 : -0.2, 0]);
+  }
+  // caixão acorrentado pendurado
+  const coffin = new THREE.Group(); coffin.position.set(0.5, 4.8, -3.6); g.add(coffin);
+  add(coffin, new THREE.BoxGeometry(0.8, 2.0, 0.4), std(0x2a1810, { roughness: 0.9 }), [0, 0, 0]);
+  add(coffin, new THREE.CylinderGeometry(0.02, 0.02, 2.2, 4), std(0x333338, { metalness: 0.8 }), [0, 2.0, 0]);
+  updaters.push((dt, t) => { coffin.rotation.z = Math.sin(t * 0.6) * 0.06; coffin.rotation.y = Math.sin(t * 0.4) * 0.3; });
+  // velas em grupos
+  const flameMat = new THREE.SpriteMaterial({ map: glowSprite('#ffb040'), blending: THREE.AdditiveBlending, depthWrite: false });
+  const flames = [];
+  for (const cx of [-9, -2.2, 2.2, 9]) for (let i = 0; i < 5; i++) {
+    const x = cx + (i - 2) * 0.22, h = 0.15 + ((i * 7) % 3) * 0.1, z = -5.4 + (i % 2) * 0.2;
+    add(g, new THREE.CylinderGeometry(0.035, 0.035, h, 6), std(0xe8dcc0), [x, h / 2, z]);
+    const f = new THREE.Sprite(flameMat); f.position.set(x, h + 0.06, z); f.scale.set(0.2, 0.32, 1); g.add(f); flames.push(f);
+  }
+  updaters.push((dt, t) => flames.forEach((f, i) => { f.scale.y = 0.3 + Math.sin(t * 17 + i) * 0.05; }));
+  // névoa verde-arroxeada (planos aditivos)
+  const fogMat = new THREE.MeshBasicMaterial({ color: 0x40205a, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false });
+  const fogs = [];
+  for (let i = 0; i < 3; i++) { const f = add(g, new THREE.PlaneGeometry(30, 1.2), fogMat, [0, 0.25 + i * 0.2, -3 + i * 0.8], [-Math.PI / 2 + 0.2, 0, 0]); fogs.push(f); }
+  updaters.push((dt, t) => fogs.forEach((f, i) => { f.position.x = Math.sin(t * 0.2 + i) * 1.5; }));
+  const colMat = std(0x37323c, { roughness: 0.75 }), statueMat = std(0x55525a, { roughness: 0.6 });
+  const statues = edgeStatues(g, updaters, colMat, statueMat);
+  const vents = edgeVents(g, updaters, 'brasa');
+  g.add(new THREE.HemisphereLight(0x8a70c0, 0x140a18, 1.15));
+  const key = new THREE.DirectionalLight(0xc8b8ff, 2.3); key.position.set(-3, 9, 6); key.castShadow = quality !== 'baixa';
+  setupShadow(key); g.add(key); g.add(key.target);
+  const green = new THREE.PointLight(0x50ff90, 9, 14, 1.4); green.position.set(0, 3, -4); g.add(green);
+  const red = new THREE.PointLight(0xff2030, 8, 12, 1.4); red.position.set(0, 3.5, -1); g.add(red);
+  updaters.push((dt, t) => { green.intensity = 8 + Math.sin(t * 1.3) * 2; });
+  return { group: g, id: 'catedral', update: (dt, t) => updaters.forEach((u) => u(dt, t)), cheer: () => {}, emberColor: 0x70ff90, bloodTint: 1,
+    onEvent: (e) => { if (e.type === 'hazard') vents.erupt(e.side); }, sync: (st) => statues.sync(st) };
+}
+
+function mulberry(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

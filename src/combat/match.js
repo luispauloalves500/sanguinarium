@@ -3,6 +3,7 @@ import * as C from '../core/constants.js';
 import { CHARACTERS, getMove } from './moves.js';
 import { InputBuffer } from './input.js';
 import { worldBox, overlap, hurtboxes, pushbox } from '../hitboxes/boxes.js';
+import { createStage, resetStageRound, tryInteract, updateVault, stepStage, afterHit, stepTransition } from './arena.js';
 
 const NEUTRAL = new Set(['idle', 'walk', 'crouch']);
 const BTN_ORDER = ['hk', 'hp', 'lk', 'lp'];
@@ -28,7 +29,8 @@ export function createFighter(idx, charId) {
 
 export class Match {
   constructor(opts = {}) {
-    this.opts = { p1: 'varkhan', p2: 'lilith', arena: 'coliseu', training: false, timer: C.ROUND_TIME, ...opts };
+    this.opts = { p1: 'varkhan', p2: 'lilith', arena: 'coliseu', training: false, timer: C.ROUND_TIME, hazards: true, ...opts };
+    this.stage = createStage(this.opts.arena, this.opts.hazards);
     this.frame = 0; this.round = 1; this.events = [];
     this.fighters = [createFighter(0, this.opts.p1), createFighter(1, this.opts.p2)];
     this.result = null; this.finishWinner = -1;
@@ -53,6 +55,7 @@ export class Match {
       f.inp.reset(); f.used = -1;
     }
     a.x = -C.START_GAP; b.x = C.START_GAP; a.facing = 1; b.facing = -1;
+    resetStageRound(this.stage);
     this.projectiles = []; this.cine = null; this.fatal = null; this.hitstop = 0;
     this.timer = this.opts.timer; this.timerAcc = 0; this.koLoser = -1;
     this.setPhase('intro');
@@ -80,6 +83,7 @@ export class Match {
       if (this.fatal.f >= this.fatal.dur) this.endMatch(this.fatal.att, this.fatal.id);
       return;
     }
+    if (this.phase === 'transition') { stepTransition(this); return; }
     if (this.cine) { this.updateCine(); return; }
     if (this.hitstop > 0) { this.hitstop--; return; }
 
@@ -91,6 +95,7 @@ export class Match {
     this.constrain(px);
     for (const f of F) this.updateFacing(f, F[1 - f.idx]);
     this.updateProjectiles();
+    stepStage(this);
     this.collide();
     this.rules();
   }
@@ -117,7 +122,9 @@ export class Match {
         break;
       case 'getup': if (f.sf >= C.GETUP_FRAMES) this.toNeutral(f); break;
       case 'dodge': if (f.sf >= C.DODGE_FRAMES) this.toNeutral(f); else if (f.sf >= C.DODGE_INVULN[0] && f.sf <= C.DODGE_INVULN[1]) f.invuln = Math.max(f.invuln, 1); break;
+      case 'vault': updateVault(this, f); break;
       case 'jumpsquat':
+        if (f.sf <= 3 && tryInteract(this, f, o)) break;
         if (f.sf >= C.JUMP_SQUAT) {
           f.state = 'air'; f.sf = 0; f.airborne = true; f.airUsed = false;
           f.vy = C.JUMP_VY; f.vx = f.jumpDir * f.ch.jumpVX;
@@ -189,6 +196,7 @@ export class Match {
     }
     if (this.trySuper(f)) return true;
     if (this.trySpecial(f, o)) return true;
+    if (tryInteract(this, f, o)) return true;
     if (this.pb(f, 'grab')) {
       if (this.canThrow(f, o)) this.startThrow(f, o); else this.startMove(f, 'grab_whiff');
       return true;
@@ -205,12 +213,14 @@ export class Match {
 
   trySuper(f) {
     const I = f.inp;
+    // U+I = supergolpe 1; ↓ + U+I = supergolpe 2. Simplificado: ESP + ↑/↖ = 1, ESP + ↗ = 2.
+    const d = I.heldDigit();
     if (f.meter >= C.SUPER_COST && I.pressedWithin('lk', 3) && I.pressedWithin('hk', 3) && (I.pressed('lk') || I.pressed('hk'))) {
-      f.meter -= C.SUPER_COST; this.startMove(f, f.ch.superMove);
+      f.meter -= C.SUPER_COST; this.startMove(f, d <= 3 && f.ch.superMove2 ? f.ch.superMove2 : f.ch.superMove);
       this.emit({ type: 'super', who: f.idx, name: f.move.name }); return true;
     }
-    if (I.pressed('special') && I.heldDigit() >= 7 && f.meter >= C.SUPER_COST) {
-      f.meter -= C.SUPER_COST; this.startMove(f, f.ch.superMove);
+    if (I.pressed('special') && d >= 7 && f.meter >= C.SUPER_COST) {
+      f.meter -= C.SUPER_COST; this.startMove(f, d === 9 && f.ch.superMove2 ? f.ch.superMove2 : f.ch.superMove);
       this.emit({ type: 'super', who: f.idx, name: f.move.name }); return true;
     }
     return false;
@@ -399,6 +409,9 @@ export class Match {
       if (f.hp <= 0 && (this.phase !== 'fight')) { f.state = 'dead'; f.sf = 0; }
       else { f.state = 'knockdown'; f.kdTimer = C.KNOCKDOWN_FRAMES; f.sf = 0; }
       this.emit({ type: 'land', who: f.idx, x: f.x, heavy: true });
+    } else if (f.state === 'vault') {
+      f.state = 'land'; f.sf = 0; f.vx = 0; f.invuln = Math.min(f.invuln, 2);
+      this.emit({ type: 'land', who: f.idx, x: f.x, heavy: false });
     } else if (f.state === 'air') {
       f.move = null; f.state = 'land'; f.sf = 0; f.vx = 0;
       this.emit({ type: 'land', who: f.idx, x: f.x, heavy: false });
@@ -408,7 +421,7 @@ export class Match {
   constrain(px) {
     const [a, b] = this.fighters;
     // pushboxes
-    if (!a.hidden && !b.hidden && !['thrown', 'cinematic'].includes(a.state) && !['thrown', 'cinematic'].includes(b.state)) {
+    if (!a.hidden && !b.hidden && !['thrown', 'cinematic', 'vault'].includes(a.state) && !['thrown', 'cinematic', 'vault'].includes(b.state)) {
       const pa = pushbox(a), pb = pushbox(b);
       if (overlap(pa, pb)) {
         const ov = Math.min(pa[2], pb[2]) - Math.max(pa[0], pb[0]);
@@ -583,6 +596,7 @@ export class Match {
     this.hitstop = h.hitstop || (dmg >= 60 ? 9 : 6);
     this.emit({ type: 'hit', att: att.idx, def: def.idx, x: ix, y: iy, dmg, heavy: !!h.heavy || dmg >= 60, slash: !!h.slash,
       counter, combo: def.comboHits, level: h.level, proj: proj ? proj.kind : null, hpAfter: def.hp });
+    afterHit(this, att, def, h, proj);
   }
 
   applyPush(att, def, push, proj) {
@@ -627,7 +641,7 @@ export class Match {
     let cand = null;
     if (I.pressed('special')) {
       const d = I.heldDigit();
-      cand = f.ch.fatalities.find((x) => x.simple === (d <= 3 ? 'd' : 'n'));
+      cand = f.ch.fatalities.find((x) => x.simple === (d <= 3 ? 'd' : d === 6 ? 'f' : d === 4 ? 'b' : 'n'));
     } else {
       for (const fat of f.ch.fatalities) if (I.pressed(fat.btn) && I.motion(fat.motion, 40, 10)) { cand = fat; break; }
     }

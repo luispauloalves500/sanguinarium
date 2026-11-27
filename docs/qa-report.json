@@ -1,5 +1,5 @@
 {
-  "started": "2026-11-27T00:48:44.377Z",
+  "started": "2026-11-27T02:04:47.633Z",
   "checks": [
     {
       "name": "título -> menu principal",
@@ -30,11 +30,11 @@
       "fighters": [
         {
           "char": "varkhan",
-          "hp": 80,
+          "hp": 248,
           "wins": 2,
-          "meter": 130,
+          "meter": 300,
           "state": "idle",
-          "x": -5.43,
+          "x": -3.5,
           "combo": 2,
           "hits": 25
         },
@@ -42,11 +42,11 @@
           "char": "lilith",
           "hp": 0,
           "wins": 0,
-          "meter": 264,
+          "meter": 300,
           "state": "dizzy",
-          "x": -7.5,
-          "combo": 2,
-          "hits": 16
+          "x": -4.98,
+          "combo": 3,
+          "hits": 24
         }
       ]
     },
@@ -54,8 +54,8 @@
       "name": "partida real: golpes conectaram e sangue no chão",
       "ok": true,
       "p1hits": 25,
-      "p2hits": 16,
-      "decals": 753
+      "p2hits": 24,
+      "decals": 604
     },
     {
       "name": "resultado exibido após a partida real",
@@ -82,8 +82,8 @@
         "hit",
         "hit",
         "hit",
-        "heavyWhoosh",
         "land",
+        "heavyWhoosh",
         "proj"
       ]
     },
@@ -128,6 +128,138 @@
       }
     },
     {
+      "name": "Sentença de Sangue (v0.2) por teclado: correntes_suplicio",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "correntes_suplicio",
+        "fatalityName": "Correntes do Suplício",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue (v0.2) por teclado: ruptura_infernal",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "ruptura_infernal",
+        "fatalityName": "Ruptura Infernal",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue (v0.2) por teclado: beijo_morte",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "beijo_morte",
+        "fatalityName": "Beijo da Morte",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "Sentença de Sangue (v0.2) por teclado: chuva_final",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "chuva_final",
+        "fatalityName": "Chuva de Lanças Final",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "2º supergolpe por teclado (S+U+I): tribunal",
+      "ok": true,
+      "got": "tribunal"
+    },
+    {
+      "name": "2º supergolpe por teclado (S+U+I): saba",
+      "ok": true,
+      "got": "saba"
+    },
+    {
+      "name": "Catedral: ↑+O derruba a Estátua do Carrasco no oponente",
+      "ok": true,
+      "statue": "down",
+      "hp": 910
+    },
+    {
+      "name": "Coliseu: ↑+O na Corrente do Muro salta para trás do oponente",
+      "ok": true,
+      "x": [
+        -4.62,
+        -5.9
+      ]
+    },
+    {
+      "name": "Transição de cenário por teclado: Coliseu -> Fosso do Coliseu",
+      "ok": false,
+      "area": 1,
+      "phase": "transition",
+      "hp": 865
+    },
+    {
+      "name": "Transição de cenário por teclado: Catedral -> Cripta Profana",
+      "ok": true,
+      "area": 1,
+      "phase": "fight"
+    },
+    {
+      "name": "Opção \"Perigos e transições de arena\" desativada: sem transição",
+      "ok": true,
+      "enabled": false,
+      "area": 0,
+      "phase": "fight"
+    },
+    {
+      "name": "Arcade: menu abre a seleção com a escada",
+      "ok": true
+    },
+    {
+      "name": "Arcade: luta 1 começa contra Lilith no Coliseu",
+      "ok": true,
+      "f": [
+        "varkhan",
+        "lilith"
+      ]
+    },
+    {
+      "name": "Arcade: vitória oferece \"Próxima luta\"",
+      "ok": true,
+      "btns": [
+        "next",
+        "quit"
+      ]
+    },
+    {
+      "name": "Arcade: luta 2 é o Reflexo Sombrio (espelho) na Catedral",
+      "ok": true
+    },
+    {
+      "name": "Arcade: última vitória oferece \"Ver o final\"",
+      "ok": true,
+      "btns": [
+        "ending",
+        "quit"
+      ]
+    },
+    {
+      "name": "Arcade: tela de final do personagem (pt-BR)",
+      "ok": true,
+      "len": 348
+    },
+    {
+      "name": "Remapeamento: Soco rápido -> F salvo nas opções",
+      "ok": true,
+      "lbl": "F",
+      "saved": "KeyF"
+    },
+    {
+      "name": "Remapeamento persiste após recarregar e F dispara o soco rápido",
+      "ok": true,
+      "mv": "lp"
+    },
+    {
       "name": "2P local: P1 (WASD) e P2 (setas) se movem de forma independente",
       "ok": true,
       "x0": [
@@ -135,8 +267,8 @@
         1.7
       ],
       "x1": [
-        -0.579999999999999,
-        0.6999999999999991
+        -0.8039999999999992,
+        0.8999999999999992
       ]
     },
     {
@@ -148,6 +280,7 @@
         "gong",
         "whoosh",
         "whoosh",
+        "hit",
         "hit"
       ]
     },
@@ -155,23 +288,23 @@
       "name": "CPU x CPU completa em coliseu",
       "ok": true,
       "result": {
-        "winner": 0,
-        "fatality": "explosao_carmesim",
-        "fatalityName": "Explosão Carmesim",
+        "winner": 1,
+        "fatality": "ruptura_infernal",
+        "fatalityName": "Ruptura Infernal",
         "rounds": 2
       },
-      "frames": 4846
+      "frames": 4973
     },
     {
       "name": "CPU x CPU completa em catedral",
       "ok": true,
       "result": {
-        "winner": 0,
-        "fatality": "ritual_proibido",
-        "fatalityName": "Ritual Proibido",
-        "rounds": 2
+        "winner": 1,
+        "fatality": "correntes_suplicio",
+        "fatalityName": "Correntes do Suplício",
+        "rounds": 3
       },
-      "frames": 5367
+      "frames": 7034
     },
     {
       "name": "celular: toque no título abre menu",
@@ -198,19 +331,19 @@
   "errors": [],
   "realMatch": {
     "phase": "finish",
-    "pf": 3,
+    "pf": 7,
     "round": 2,
     "timer": 77,
-    "frame": 3043,
+    "frame": 3421,
     "result": null,
     "fighters": [
       {
         "char": "varkhan",
-        "hp": 80,
+        "hp": 248,
         "wins": 2,
-        "meter": 130,
+        "meter": 300,
         "state": "idle",
-        "x": -5.43,
+        "x": -3.5,
         "combo": 2,
         "hits": 25
       },
@@ -218,11 +351,11 @@
         "char": "lilith",
         "hp": 0,
         "wins": 0,
-        "meter": 264,
+        "meter": 300,
         "state": "dizzy",
-        "x": -7.5,
-        "combo": 2,
-        "hits": 16
+        "x": -4.98,
+        "combo": 3,
+        "hits": 24
       }
     ]
   },
@@ -232,7 +365,7 @@
     "fatalityName": "Execução Real",
     "rounds": 2
   },
-  "finished": "2026-11-27T00:56:02.549Z",
+  "finished": "2026-11-27T02:21:02.929Z",
   "consoleErrors": [],
-  "allPassed": true
+  "allPassed": false
 }

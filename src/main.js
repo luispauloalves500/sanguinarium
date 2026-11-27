@@ -8,11 +8,15 @@ import { InputDevices } from './input/devices.js';
 import { Hud } from './ui/hud.js';
 import { TouchControls } from './ui/touch.js';
 import { Screens } from './ui/screens.js';
+import { PerfGovernor } from './render/perf.js';
+import { buildLadder, ENDINGS } from './modes/arcade.js';
+
+export const VERSION = '0.2.0';
 
 const SIM_DT = 1 / 60;
 const params = new URLSearchParams(location.search);
 const isTouch = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS = { vol_master: 0.8, vol_music: 0.45, vol_sfx: 0.9, vol_voice: 0.8, bloodLevel: '1', bloodPersist: '1', quality: isTouch ? 'baixa' : 'media', reduceShake: '0', reduceFlash: '0', touchMode: 'auto', touchAlpha: '0', difficulty: 1 };
+const DEFAULTS = { vol_master: 0.8, vol_music: 0.45, vol_sfx: 0.9, vol_voice: 0.8, bloodLevel: '1', bloodPersist: '1', quality: 'auto', showFps: '0', reduceShake: '0', reduceFlash: '0', touchMode: 'auto', touchAlpha: '0', difficulty: 1, hazards: '1', keymap1: '' };
 
 class App {
   constructor() {
@@ -22,12 +26,17 @@ class App {
     this.audio = new AudioSystem();
     this.applyAudio();
     this.devices = new InputDevices();
+    if (this.settings.keymap1) { try { this.devices.setBindings(JSON.parse(this.settings.keymap1)); } catch (e) { /* mapa inválido: padrão */ } }
     this.hud = new Hud();
     this.hud.reduceFlash = this.settings.reduceFlash === '1';
     this.bloodOpts = { intensity: +this.settings.bloodLevel, persist: this.settings.bloodPersist === '1' };
+    const q = this.settings.quality === 'auto' ? (isTouch ? 'baixa' : 'media') : this.settings.quality;
     this.view = new GameView(document.getElementById('game'), {
-      quality: this.settings.quality, blood: this.bloodOpts, reduceShake: this.settings.reduceShake === '1', preserve: params.has('debug'),
+      quality: q, blood: this.bloodOpts, reduceShake: this.settings.reduceShake === '1', preserve: params.has('debug'),
     }, this.audio, this.hud);
+    this.perf = new PerfGovernor(this.view, { enabled: this.settings.quality === 'auto', minScale: isTouch ? 0.5 : 0.6 });
+    this.fpsEl = document.getElementById('fps');
+    this.fpsEl.classList.toggle('hidden', this.settings.showFps !== '1');
     this.touch = new TouchControls(this.devices);
     this.touch.setAlpha(this.settings.touchAlpha === '1');
     document.body.classList.toggle('touch', this.touchEnabled());
@@ -60,6 +69,7 @@ class App {
     if (k === 'touchMode') document.body.classList.toggle('touch', this.touchEnabled());
     if (k === 'touchAlpha') this.touch.setAlpha(v === '1');
     if (k === 'quality') setTimeout(() => location.reload(), 200);
+    if (k === 'showFps') this.fpsEl.classList.toggle('hidden', v !== '1');
   }
 
   onKey(code) {
@@ -76,11 +86,12 @@ class App {
     this.cfg = cfg;
     const training = cfg.mode === 'training';
     this.devices.clearQueue();
-    this.match = new Match({ p1: cfg.p1, p2: cfg.p2, arena: cfg.arena, training });
-    this.ctrl = [cfg.cpu1 ? new CpuController(0, cfg.difficulty ?? 2, 77) : null, cfg.mode === 'cpu' || cfg.cpu2 ? new CpuController(1, cfg.difficulty ?? 1, Date.now() & 0xffff) : null];
+    this.match = new Match({ p1: cfg.p1, p2: cfg.p2, arena: cfg.arena, training, hazards: params.get('hazards') ? params.get('hazards') !== '0' : this.settings.hazards !== '0' });
+    this.ctrl = [cfg.cpu1 ? new CpuController(0, cfg.difficulty ?? 2, 77) : null, cfg.mode === 'cpu' || cfg.mode === 'arcade' || cfg.cpu2 ? new CpuController(1, cfg.difficulty ?? 1, Date.now() & 0xffff) : null];
     this.devices.twoPlayers = cfg.mode === 'versus';
     this.view.loadArena(cfg.arena);
     this.view.setFighters([cfg.p1, cfg.p2]);
+    this.view.warmup();
     this.hud.setup(this.match); this.hud.show(true); this.hud.clearAnnounce();
     this.touch.show(this.touchEnabled());
     this.screens.show(null);
@@ -89,6 +100,21 @@ class App {
     this.audio.init(); this.audio.startMusic(cfg.arena);
   }
   previewArena(id) { this.view.loadArena(id); }
+  // ---------------- modo Arcade: escada de lutas contra a CPU com final por personagem
+  startArcade(charId, difficulty) {
+    this.arcade = { char: charId, ladder: buildLadder(charId, difficulty), stage: 0, continues: 0 };
+    this.arcadeFight();
+  }
+  arcadeFight() {
+    const a = this.arcade, s = a.ladder[a.stage];
+    this.startMatch({ p1: a.char, p2: s.p2, arena: s.arena, mode: 'arcade', difficulty: s.difficulty, arcadeStage: a.stage });
+    this.hud.showStageName(`LUTA ${a.stage + 1}/${a.ladder.length} · ${s.title.toUpperCase()}`, 240);
+  }
+  showEnding() {
+    const a = this.arcade; this.state = 'menu'; this.match = null; this.hud.show(false); this.touch.show(false);
+    this.screens.ending(a.char, ENDINGS[a.char], a.continues);
+    this.arcade = null;
+  }
   togglePause() {
     if (this.state === 'fight') { this.state = 'paused'; this.screens.show('pause'); this.touch.show(false); }
     else if (this.state === 'paused') this.pauseAction('resume');
@@ -100,18 +126,23 @@ class App {
     else if (act === 'quit') this.toMenu();
   }
   resultAction(act) {
+    if (act === 'next' && this.arcade) { this.arcade.stage++; this.arcadeFight(); return; }
+    if (act === 'retry' && this.arcade) { this.arcade.continues++; this.arcadeFight(); return; }
+    if (act === 'ending' && this.arcade) { this.showEnding(); return; }
+    if (act !== 'rematch') this.arcade = null;
     if (act === 'rematch') this.startMatch(this.cfg);
     else if (act === 'reselect') { this.toMenu(); this.screens.openSelect(); }
     else this.toMenu();
   }
   toMenu() {
+    this.arcade = null;
     this.state = 'menu'; this.match = null; this.hud.show(false); this.touch.show(false);
     this.screens.show('main'); this.audio.startMusic('menu');
   }
   showResults() {
     if (this.resultShown) return;
     this.resultShown = true; this.state = 'results'; this.touch.show(false);
-    this.screens.results(this.match);
+    this.screens.results(this.match, this.arcade);
   }
 
   // anúncios conforme a fase da partida
@@ -152,7 +183,10 @@ class App {
   loop(now) {
     requestAnimationFrame((t) => this.loop(t));
     try {
-      const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now; this.frames++;
+      const rawDt = (now - this.last) / 1000;
+      const dt = Math.min(0.1, rawDt); this.last = now; this.frames++;
+      this.perf.tick(rawDt, this.state === 'fight');
+      if (this.settings.showFps === '1' && this.frames % 15 === 0) this.fpsEl.textContent = `${Math.round(this.perf.fps)} qps · ${Math.round(this.view.resScale * 100)}%`;
       if (this.state === 'fight' && this.match) {
         const m = this.match;
         let speed = this.timeScale;
@@ -189,7 +223,7 @@ class App {
 const app = new App();
 // API de depuração/testes automatizados (sem efeito no jogo normal)
 window.SANG = {
-  app,
+  app, version: VERSION,
   get match() { return app.match; },
   start: (cfg) => app.startMatch({ p1: 'varkhan', p2: 'lilith', arena: 'coliseu', mode: 'cpu', difficulty: 1, ...cfg }),
   state: () => {

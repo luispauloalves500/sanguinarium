@@ -63,11 +63,11 @@ try {
     await tap(page, 'Enter'); await sleep(600);
     check('título -> menu principal', (await st(page)).screen === 'main');
     await shot(page, '02-menu-principal');
-    await tap(page, 'KeyS'); await tap(page, 'KeyS'); await tap(page, 'KeyS'); await sleep(200); await tap(page, 'Enter'); await sleep(500);
+    await tap(page, 'KeyS'); await tap(page, 'KeyS'); await tap(page, 'KeyS'); await tap(page, 'KeyS'); await sleep(200); await tap(page, 'Enter'); await sleep(500);
     check('menu: Lista de Golpes abre', (await st(page)).screen === 'moves');
     await shot(page, '03-lista-de-golpes');
     await tap(page, 'Escape'); await sleep(300);
-    await tap(page, 'Enter'); await sleep(700); // 1 Jogador vs CPU
+    await tap(page, 'KeyS'); await tap(page, 'Enter'); await sleep(700); // 1 Jogador vs CPU
     check('menu: seleção de lutador', (await st(page)).screen === 'select');
     await tap(page, 'KeyJ'); await sleep(400);  // P1 confirma Varkhan
     await sleep(600);
@@ -170,6 +170,168 @@ try {
     check(`Sentença de Sangue por teclado: ${id}`, ok && s.match.result && s.match.result.fatality === id, { result: s.match.result });
     report.errors.push(...logs, ...s.errors);
     idx++;
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.2: Sentenças 3 e 4 por teclado real
+  const FAT2 = [
+    ['varkhan', 'lilith', 'coliseu', 'correntes_suplicio', 2.5, [['KeyD'], [], ['KeyA'], [], ['KeyD'], ['KeyD', 'KeyJ'], []], 205],
+    ['varkhan', 'lilith', 'catedral', 'ruptura_infernal', 1.2, [['KeyS'], [], ['KeyS'], [], ['KeyS'], ['KeyS', 'KeyU'], []], 110],
+    ['lilith', 'varkhan', 'coliseu', 'beijo_morte', 1.0, [['KeyD'], [], ['KeyD'], [], ['KeyS'], ['KeyS', 'KeyJ'], []], 215],
+    ['lilith', 'varkhan', 'catedral', 'chuva_final', 3.2, [['KeyA'], [], ['KeyS'], [], ['KeyA'], ['KeyA', 'KeyU'], []], 200],
+  ];
+  let idx2 = 17;
+  for (const [p1, p2, arena, id, dist, seq, frame] of FAT2) {
+    const { page, logs } = await open(browser);
+    await toFinish(page, p1, p2, arena);
+    await page.evaluate((dist) => { const m = SANG.match; m.fighters[1].x = 2; m.fighters[0].x = m.fighters[1].x - dist; }, dist);
+    await waitFor(page, () => ['idle', 'crouch', 'walk'].includes(SANG.match.fighters[0].state), null, 5000).catch(() => {});
+    await sleep(200);
+    await keys(page, seq, 50);
+    let ok = true;
+    await waitFor(page, () => SANG.match.phase === 'fatality', null, 8000).catch(() => { ok = false; });
+    if (ok) {
+      await waitFor(page, (fr) => SANG.match.phase !== 'fatality' || SANG.match.fatal.f >= fr, frame);
+      await shot(page, `${idx2}-fatalidade-${id}`);
+      await waitFor(page, () => SANG.match.phase === 'matchEnd', null, 60000);
+    }
+    const s = await st(page);
+    check(`Sentença de Sangue (v0.2) por teclado: ${id}`, ok && s.match.result && s.match.result.fatality === id, { result: s.match.result });
+    report.errors.push(...logs, ...s.errors);
+    idx2++;
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.2: 2º supergolpe por teclado (S + U + I)
+  for (const [p1, p2, sid, n] of [['varkhan', 'lilith', 'tribunal', 21], ['lilith', 'varkhan', 'saba', 22]]) {
+    const { page, logs } = await open(browser);
+    await page.evaluate(([p1, p2]) => { SANG.start({ p1, p2, arena: p1 === 'varkhan' ? 'catedral' : 'coliseu', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; }, [p1, p2]);
+    await waitFor(page, () => SANG.match.phase === 'fight');
+    let got = null;
+    for (let tries = 0; tries < 4 && !got; tries++) {
+      await page.evaluate(() => { const m = SANG.match; m.fighters[0].meter = 300; m.fighters[0].x = -0.7; m.fighters[1].x = 0.7; });
+      await sleep(250);
+      await keys(page, [['KeyS'], ['KeyS', 'KeyU', 'KeyI'], ['KeyS'], []], 70);
+      got = await waitFor(page, () => SANG.match.cine && SANG.match.cine.f > 70, null, 6000).then(() => page.evaluate(() => SANG.match.cine.id)).catch(() => null);
+    }
+    await shot(page, `${n}-supergolpe2-${sid}`);
+    check(`2º supergolpe por teclado (S+U+I): ${sid}`, got === sid, { got });
+    await waitFor(page, () => !SANG.match.cine, null, 20000).catch(() => {});
+    const s = await st(page);
+    report.errors.push(...logs, ...s.errors);
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.2: arenas interativas por teclado real
+  {
+    const { page, logs } = await open(browser);
+    const prep = async (arena, p1x, p2x) => {
+      await page.evaluate(([arena]) => { SANG.start({ p1: 'varkhan', p2: 'lilith', arena, mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; }, [arena]);
+      await waitFor(page, () => SANG.match.phase === 'fight');
+      await page.evaluate(([a, b]) => { const m = SANG.match; const [f, o] = m.fighters; f.x = a; o.x = b; f.facing = b > a ? 1 : -1; o.facing = -f.facing; f.inp.refacing(f.facing); o.inp.refacing(o.facing); }, [p1x, p2x]);
+      await sleep(250);
+    };
+    // Estátua do Carrasco: P1 de costas para a borda direita, ↑ + O
+    await prep('catedral', 7.1, 4.6);
+    await page.evaluate(() => { SANG.app.script[1] = () => 2; }); // P2 agachado (não bloqueia golpe alto)
+    await keys(page, [['KeyW', 'KeyO'], []], 60);
+    await waitFor(page, () => SANG.match.stage.statues[1] === 'down', null, 10000).catch(() => {});
+    await sleep(300);
+    let r = await page.evaluate(() => ({ statue: SANG.match.stage.statues[1], hp: SANG.match.fighters[1].hp }));
+    await shot(page, '23-arena-estatua-do-carrasco');
+    check('Catedral: ↑+O derruba a Estátua do Carrasco no oponente', r.statue === 'down' && r.hp === 910, r);
+    await page.evaluate(() => { delete SANG.app.script[1]; });
+    // Corrente do Muro: P1 encurralado à esquerda salta por cima
+    await prep('coliseu', -7.1, -5.9);
+    await keys(page, [['KeyW', 'KeyO'], []], 60);
+    await waitFor(page, () => SANG.match.fighters[0].state === 'vault' && SANG.match.fighters[0].sf >= 12, null, 8000).catch(() => {});
+    await shot(page, '24-arena-corrente-do-muro');
+    await waitFor(page, () => SANG.match.fighters[0].state !== 'vault', null, 8000).catch(() => {});
+    await sleep(300);
+    r = await page.evaluate(() => ({ x: SANG.match.fighters.map((f) => +f.x.toFixed(2)) }));
+    check('Coliseu: ↑+O na Corrente do Muro salta para trás do oponente', r.x[0] > r.x[1], r);
+    // Transição: rasteira (↓+I) colada à borda -> Fosso do Coliseu
+    await prep('coliseu', 5.9, 6.95);
+    await keys(page, [['KeyS', 'KeyI'], ['KeyS'], []], 90);
+    await waitFor(page, () => SANG.match.stage.area === 1 && SANG.match.phase === 'fight', null, 60000).catch(() => {});
+    await sleep(1200);
+    r = await page.evaluate(() => ({ area: SANG.match.stage.area, phase: SANG.match.phase, hp: SANG.match.fighters[1].hp }));
+    await shot(page, '25-arena-transicao-fosso');
+    check('Transição de cenário por teclado: Coliseu -> Fosso do Coliseu', r.area === 1 && r.phase === 'fight', r);
+    await prep('catedral', 5.9, 6.95);
+    await keys(page, [['KeyS', 'KeyI'], ['KeyS'], []], 90);
+    await waitFor(page, () => SANG.match.stage.area === 1 && SANG.match.phase === 'fight', null, 60000).catch(() => {});
+    await sleep(1200);
+    r = await page.evaluate(() => ({ area: SANG.match.stage.area, phase: SANG.match.phase }));
+    await shot(page, '26-arena-transicao-cripta');
+    check('Transição de cenário por teclado: Catedral -> Cripta Profana', r.area === 1 && r.phase === 'fight', r);
+    // opção desliga perigos
+    await page.evaluate(() => SANG.app.setOption('hazards', '0'));
+    await prep('coliseu', 5.9, 6.95);
+    await keys(page, [['KeyS', 'KeyI'], ['KeyS'], []], 90);
+    await sleep(1500);
+    r = await page.evaluate(() => ({ enabled: SANG.match.stage.enabled, area: SANG.match.stage.area, phase: SANG.match.phase }));
+    check('Opção "Perigos e transições de arena" desativada: sem transição', !r.enabled && r.area === 0, r);
+    await page.evaluate(() => SANG.app.setOption('hazards', '1'));
+    const s = await st(page);
+    report.errors.push(...logs, ...s.errors);
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.2: modo Arcade pelo menu
+  {
+    const { page, logs } = await open(browser);
+    await sleep(800);
+    await tap(page, 'Enter'); await sleep(500); // título
+    await tap(page, 'Enter'); await sleep(600); // Modo Arcade (1º item)
+    let s = await st(page);
+    await shot(page, '27-arcade-selecao');
+    check('Arcade: menu abre a seleção com a escada', s.screen === 'select' && (await page.evaluate(() => document.querySelectorAll('.ladder li').length)) === 3);
+    await tap(page, 'KeyJ'); await sleep(1200);
+    s = await st(page);
+    check('Arcade: luta 1 começa contra Lilith no Coliseu', s.app === 'fight' && s.match.fighters[1].char === 'lilith', { f: s.match && s.match.fighters.map((f) => f.char) });
+    const winNow = async () => {
+      await waitFor(page, () => SANG.match.phase === 'fight', null, 20000);
+      await page.evaluate(() => { const m = SANG.match; SANG.app.ctrl[1] = null; m.fighters[0].wins = 1; m.fighters[1].hp = 0; SANG.app.timeScale = 3; });
+      await waitFor(page, () => SANG.app.state === 'results', null, 120000);
+      await page.evaluate(() => { SANG.app.timeScale = 1; });
+      await sleep(300);
+    };
+    await winNow();
+    let btns = await page.evaluate(() => [...document.querySelectorAll('#resultMenu button')].map((b) => b.dataset.act));
+    check('Arcade: vitória oferece "Próxima luta"', btns[0] === 'next', { btns });
+    await page.click('#resultMenu button[data-act="next"]'); await sleep(800);
+    s = await st(page);
+    check('Arcade: luta 2 é o Reflexo Sombrio (espelho) na Catedral', s.match.fighters[1].char === 'varkhan', {});
+    await page.evaluate(() => { SANG.app.arcade.stage = 2; });
+    await winNow();
+    btns = await page.evaluate(() => [...document.querySelectorAll('#resultMenu button')].map((b) => b.dataset.act));
+    check('Arcade: última vitória oferece "Ver o final"', btns[0] === 'ending', { btns });
+    await page.click('#resultMenu button[data-act="ending"]'); await sleep(800);
+    s = await st(page);
+    const endTxt = await page.evaluate(() => document.getElementById('endText').textContent);
+    await shot(page, '28-arcade-final-varkhan');
+    check('Arcade: tela de final do personagem (pt-BR)', s.screen === 'ending' && /Varkhan/.test(endTxt), { len: endTxt.length });
+    report.errors.push(...logs, ...s.errors);
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.2: remapeamento de teclas
+  {
+    const { page, logs } = await open(browser);
+    await page.evaluate(() => { SANG.app.screens.show('options'); });
+    await sleep(300);
+    await page.click('#keymapList button[data-a="lp"]');
+    await tap(page, 'KeyF'); await sleep(300);
+    const lbl = await page.evaluate(() => document.querySelector('#keymapList button[data-a="lp"]').textContent);
+    await shot(page, '29-opcoes-remapeamento');
+    const saved = await page.evaluate(() => JSON.parse(SANG.app.settings.keymap1 || '{}'));
+    check('Remapeamento: Soco rápido -> F salvo nas opções', lbl === 'F' && saved.lp === 'KeyF', { lbl, saved: saved.lp });
+    await page.reload(); await page.waitForFunction(() => window.SANG);
+    await page.evaluate(() => { SANG.start({ p1: 'varkhan', p2: 'lilith', arena: 'coliseu', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; });
+    await waitFor(page, () => SANG.match.phase === 'fight');
+    await page.evaluate(() => { window._mv = []; const m = SANG.match; const orig = m.emit.bind(m); m.emit = (e) => { if (e.type === 'move' && e.who === 0) window._mv.push(e.id); orig(e); }; });
+    await tap(page, 'KeyF', 70); await sleep(800);
+    const mv = await page.evaluate(() => window._mv[0]);
+    check('Remapeamento persiste após recarregar e F dispara o soco rápido', mv === 'lp', { mv });
+    await page.evaluate(() => { SANG.app.devices.setBindings(null); SANG.app.setOption('keymap1', ''); });
+    const s = await st(page);
+    report.errors.push(...logs, ...s.errors);
     await page.close();
   }
   // ---------------------------------------------------------------- 5. 2 jogadores locais no mesmo teclado

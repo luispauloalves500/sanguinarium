@@ -7,7 +7,7 @@ export const STANCE = {
   lAx: -0.32, lAz: 0.06, kA: 0.45, lBx: 0.26, lBz: -0.06, kB: 0.32,
 };
 const P = (o) => ({ ...STANCE, ...o });
-const CROUCH = { spx: 0.35, lAx: -1.35, kA: 2.25, lBx: -0.35, kB: 2.1, nx: -0.15 };
+const CROUCH = { spx: 0.42, lAx: -1.05, kA: 1.95, lBx: -0.15, kB: 1.6, nx: -0.2 };
 const AIR = { lAx: -1.2, kA: 1.9, lBx: -0.7, kB: 2.0, spx: 0.2 };
 
 export const POSES = {
@@ -60,10 +60,16 @@ export const POSES = {
   dizzy: P({ spx: 0.25, nx: 0.55, aAx: -0.12, aBx: -0.15, aAz: 0.12, aBz: -0.12, eA: -0.3, eB: -0.3, lAx: -0.12, kA: 0.3, lBx: 0.1, kB: 0.25 }),
   winVarkhan: P({ aBx: -3.05, eB: -0.25, aBz: -0.15, aAx: -0.3, aAz: 0.4, eA: -0.4, nx: -0.35, spx: -0.12, lAx: -0.3, kA: 0.3, lBx: 0.3, kB: 0.2 }),
   winLilith: P({ aAx: -2.0, aAz: 1.0, aBx: -2.0, aBz: -1.0, eA: -0.4, eB: -0.4, nx: -0.3, spx: -0.1, lAx: -0.1, kA: 0.5, lBx: 0.1, kB: 0.9 }),
-  kneel: P({ spx: 0.15, nx: 0.75, aAx: 0.1, aBx: 0.05, aAz: 0.15, aBz: -0.15, eA: -0.2, eB: -0.2, lAx: -1.57, kA: 1.57, lBx: 0.15, kB: 2.5 }),
+  kneel: P({ spx: 0.35, nx: 0.8, aAx: 0.25, aBx: 0.2, aAz: 0.12, aBz: -0.12, eA: -0.25, eB: -0.25, lAx: -0.38, kA: 2.08, lBx: -0.22, kB: 1.98 }),
   dangle: P({ spx: -0.2, nx: -0.7, aAx: -0.3, aBx: -0.2, aAz: 0.6, aBz: -0.6, eA: -0.1, eB: -0.1, lAx: 0.1, kA: 0.2, lBx: -0.1, kB: 0.3 }),
   thrown: P({ spx: -0.3, nx: -0.6, aAx: -0.9, aBx: -0.8, eA: -0.6, eB: -0.6, lAx: -0.3, kA: 0.5, lBx: 0.2, kB: 0.4 }),
   frozen: P({ spx: 0.1, aAx: -0.2, aBx: -0.2, aAz: 0.05, aBz: -0.05, eA: -0.3, eB: -0.3, lAx: -0.1, kA: 0.1, lBx: 0.1, kB: 0.1 }),
+  crucified: P({ spx: -0.15, nx: -0.55, aAx: -0.25, aBx: -0.25, aAz: 1.4, aBz: -1.4, eA: -0.15, eB: -0.15, lAx: -0.05, lAz: 0.28, kA: 0.15, lBx: 0.05, lBz: -0.28, kB: 0.15 }),
+  writhe: P({ spx: -0.45, nx: -0.7, aAx: -2.6, aBx: -2.2, aAz: 0.5, aBz: -0.7, eA: -1.2, eB: -0.8, lAx: -0.6, kA: 1.2, lBx: 0.2, kB: 0.9 }),
+  husk: P({ spx: 0.55, nx: 0.6, aAx: -0.1, aBx: -0.15, aAz: 0.08, aBz: -0.08, eA: -0.9, eB: -1.1, lAx: -0.25, kA: 0.55, lBx: 0.15, kB: 0.5 }),
+  kiss: P({ spx: 0.3, nx: 0.25, aAx: -1.45, aAz: -0.35, eA: -0.6, aBx: -1.2, aBz: 0.3, eB: -0.9, lAx: -0.35, kA: 0.35, lBx: 0.3, kB: 0.25 }),
+  point: P({ aAx: -1.57, eA: -0.02, aAz: 0, spy: 0.25, spx: 0.1, aBx: -0.3, eB: -0.8 }),
+  yank: P({ spx: -0.35, spy: -0.4, aAx: -0.6, eA: -1.9, aBx: -0.5, eB: -1.7, lAx: 0.35, kA: 0.6, lBx: -0.55, kB: 0.3 }),
   dodge: P({ ...CROUCH, spx: 0.3, kA: 1.2, kB: 1.1, lAx: -0.7, lBx: 0.2, aAx: -1.3, aBx: -1.1, eA: -2.2, eB: -2.2 }),
 };
 export const POSE_KEYS = Object.keys(STANCE);

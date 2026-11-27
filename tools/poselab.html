@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Laboratório de poses</title>
+<style>body{margin:0;background:#222;color:#ddd;font:12px sans-serif}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js" } }</script></head><body>
+<canvas id="c"></canvas>
+<script type="module">
+// Ferramenta de desenvolvimento: renderiza poses lado a lado (vista lateral e 3/4). Uso: poselab.html?char=varkhan&poses=stance,kneel
+import * as THREE from 'three';
+import { buildFighter, applyPose } from '../src/characters/models.js';
+import { POSES } from '../src/animation/poses.js';
+const q = new URLSearchParams(location.search);
+const char = q.get('char') || 'varkhan';
+const names = (q.get('poses') || 'stance').split(',');
+const view = q.get('view') || 'side';
+const W = 300, H = 380, cols = Math.min(names.length, 6), rows = Math.ceil(names.length / cols);
+const cv = document.getElementById('c');
+const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
+r.setSize(W * cols, H * rows); r.setScissorTest(true);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x30303a);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.6));
+const dl = new THREE.DirectionalLight(0xffffff, 2.2); dl.position.set(3, 5, 4); scene.add(dl);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 40), new THREE.MeshStandardMaterial({ color: 0x555560 }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const grid = new THREE.GridHelper(200, 400, 0x888888, 0x666666); grid.position.y = 0.002; scene.add(grid);
+const cam = new THREE.PerspectiveCamera(32, W / H, 0.1, 50);
+const models = names.map((n, i) => {
+  const fm = buildFighter(char, q.get('alt') === '1');
+  if (q.get('tier')) fm.setDamageTier(+q.get('tier'));
+  const [pn, lie] = n.split(':');
+  applyPose(fm, POSES[pn], { lie: +(lie || 0) }); fm.update(0.016, 0, {});
+  fm.root.position.set(i * 6, 0, 0); scene.add(fm.root);
+  return fm;
+});
+const ctx = document.createElement('canvas').getContext('2d');
+names.forEach((n, i) => {
+  const cx = i % cols, cy = Math.floor(i / cols);
+  r.setViewport(cx * W, (rows - 1 - cy) * H, W, H); r.setScissor(cx * W, (rows - 1 - cy) * H, W, H);
+  const x = i * 6;
+  if (view === "side") cam.position.set(x + 5.6, 1.0, 0.2); else if (view === 'front') cam.position.set(x + 0.3, 1.2, 4.6); else cam.position.set(x + 3.4, 1.4, 3.2);
+  cam.lookAt(x, 0.9, 0); r.render(scene, cam);
+});
+// rótulos
+const lab = document.createElement('div'); lab.style.cssText = 'position:absolute;left:0;top:0';
+names.forEach((n, i) => { const d = document.createElement('div'); d.textContent = n; d.style.cssText = `position:absolute;left:${(i % cols) * W + 6}px;top:${Math.floor(i / cols) * H + 4}px;color:#fff;font-weight:bold`; lab.appendChild(d); });
+document.body.appendChild(lab);
+window.DONE = true;
+</script></body></html>

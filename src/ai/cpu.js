@@ -2,6 +2,7 @@
 // projéteis) com tempo de reação e margem de erro por dificuldade. Não lê os comandos do jogador.
 import { BTN } from '../combat/input.js';
 import { makeRng } from '../core/rng.js';
+import { interactionFor } from '../combat/arena.js';
 
 export const DIFFICULTIES = ['Fácil', 'Normal', 'Difícil', 'Pesadelo', 'Infernal'];
 const P = {
@@ -124,8 +125,11 @@ export class CpuController {
     if (op.state === 'frozen' && dist < 1.6) { this.combo(me); return; }
     if (op.state === 'knockdown' || op.state === 'getup') { this.hold = dist > prof.preferred ? BTN.right : 0; return; }
     if (r() < this.p('idle')) { this.hold = 0; return; }
+    // elementos da arena quando encurralado (Corrente do Muro / Estátua do Carrasco)
+    const it = this.d >= 1 ? interactionFor(match.stage, me) : null;
+    if (it && ((it.kind === 'vault' && dist < 2.4) || (it.kind === 'statue' && dist < 3.2 && !op.blocking)) && r() < 0.3) { this.push(BTN.up | BTN.grab, 2); this.push(0, 8); return; }
     // supergolpe
-    if (me.meter >= 200 && dist < 1.8 && r() < 0.35) { this.push(BTN.lk | BTN.hk, 1); this.push(0, 3); return; }
+    if (me.meter >= 200 && dist < (me.charId === 'varkhan' ? 2.6 : 2.2) && r() < 0.35) { const alt = r() < 0.5; if (alt) this.push(BTN.down, 2); this.push(BTN.lk | BTN.hk | (alt ? BTN.down : 0), 1); this.push(0, 3); return; }
     // fúria
     if (me.fury >= 100 && !me.furyActive && r() < 0.5) { this.push(BTN.block | BTN.grab, 1); this.push(0, 3); return; }
     if (me.charId === 'lilith' && me.hp < 450 && me.regenUses > 0 && dist > 3.5 && r() < 0.4) { this.special(me, 'regen'); return; }

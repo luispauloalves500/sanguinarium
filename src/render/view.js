@@ -21,7 +21,9 @@ export class GameView {
   constructor(canvas, settings, audio, hud) {
     this.settings = settings; this.audio = audio; this.hud = hud;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: settings.quality !== 'baixa', powerPreference: 'high-performance', preserveDrawingBuffer: !!settings.preserve });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, settings.quality === 'alta' ? 2 : 1.25));
+    this.basePR = Math.min(window.devicePixelRatio || 1, settings.quality === 'alta' ? 2 : settings.quality === 'baixa' ? 1 : 1.25);
+    this.resScale = 1;
+    this.renderer.setPixelRatio(this.basePR);
     this.renderer.shadowMap.enabled = settings.quality !== 'baixa';
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure = 1.05;
@@ -41,6 +43,10 @@ export class GameView {
     embersGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     this.embers = new THREE.Points(embersGeo, new THREE.PointsMaterial({ color: 0xff6a20, size: 0.06, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
     this.scene.add(this.embers);
+    // luz de clarão reutilizável (evita criar luzes em tempo real, que recompilam todos os shaders)
+    this.flashLight = new THREE.PointLight(0xff2020, 0, 14); this.flashLight.position.set(0, 1.5, 1); this.scene.add(this.flashLight);
+    this.flashT = 0; this.flashDur = 1; this.flashPeak = 0;
+    this._v = new THREE.Vector3();
     this.resize();
     window.addEventListener('resize', () => this.resize());
   }
@@ -54,11 +60,29 @@ export class GameView {
     this.cam.camera.updateProjectionMatrix();
   }
 
-  loadArena(id) {
-    if (this.arenaId === id) return;
+  setResolutionScale(k) {
+    this.resScale = k;
+    this.renderer.setPixelRatio(this.basePR * k);
+    this.resize();
+  }
+  setShadows(on) {
+    if (this.renderer.shadowMap.enabled === on) return;
+    this.renderer.shadowMap.enabled = on;
+    this.scene.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
+  }
+  // clarão de luz (cinemáticas/explosões) usando a luz persistente
+  flash(color, intensity, dur, x = 0, y = 1.5, z = 1) {
+    this.flashLight.color.setHex(color); this.flashLight.position.set(x, y, z);
+    this.flashPeak = intensity; this.flashDur = dur; this.flashT = dur;
+  }
+  // pré-compila shaders para não travar no primeiro golpe/efeito
+  warmup() { try { this.renderer.compile(this.scene, this.cam.camera); } catch (e) { /* opcional */ } }
+
+  loadArena(id, area = 0) {
+    if (this.arenaId === id && this.arenaArea === area) return;
     if (this.arena) { this.scene.remove(this.arena.group); dispose(this.arena.group); }
-    this.arena = buildArena(id, this.scene, this.settings.quality);
-    this.arenaId = id;
+    this.arena = buildArena(id, this.scene, this.settings.quality, area);
+    this.arenaId = id; this.arenaArea = area;
     this.embers.material.color.setHex(this.arena.emberColor);
   }
 
@@ -82,6 +106,7 @@ export class GameView {
   handleEvents(match, events) {
     const A = this.audio, B = this.blood, cam = this.cam;
     for (const e of events) {
+      if (this.arena && this.arena.onEvent) this.arena.onEvent(e);
       switch (e.type) {
         case 'hit': {
           const att = match.fighters[e.att];
@@ -135,6 +160,33 @@ export class GameView {
         case 'superHit': this.cineCtx = this.newCtx('super', e.id); break;
         case 'fatality': this.cineCtx = this.newCtx('fatal', e.id); A.play('heartbeat'); break;
         case 'ko': this.cam.shake(0.3); A.play('explosion'); break;
+        // ---- arenas interativas
+        case 'interact':
+          if (e.kind === 'vault') { A.play('chain'); A.play('jump'); this.hud.message('CORRENTE DO MURO', 'small', 40); }
+          else { A.play('heavyWhoosh'); this.hud.message('ESTÁTUA DO CARRASCO!', 'small', 50); }
+          break;
+        case 'statueDown': {
+          cam.shake(0.45); A.play('land', { heavy: true }); A.play('explosion');
+          const x0 = e.side * 7.5;
+          for (let i = 0; i < 6; i++) B.spark(x0 - e.side * (0.5 + i * 0.55), 0.15, 0, 10, 0xb0a8b8, 1.1);
+          break;
+        }
+        case 'hazard':
+          cam.shake(0.35); A.play('explosion'); A.play('gore');
+          B.spark(e.x, 0.6, 0.35, 40, e.kind === 'lava' ? 0xff7020 : 0xffa040, 2.2);
+          B.aura(e.x - e.side * 0.6, 1.0, 0.2, 30, 0xff5010, 1.6, 0.05);
+          this.hud.message(e.name.toUpperCase() + '!', 'big', 60);
+          break;
+        case 'transition':
+          cam.shake(0.6); A.play('explosion'); A.play('gore'); this.hud.flash(0.35);
+          this.hud.message(e.name.toUpperCase() + '!', 'big', 90);
+          break;
+        case 'areaChange':
+          this.loadArena(match.opts.arena, e.area);
+          this.blood.clearAll(); this.warmup();
+          this.hud.showStageName(e.name.toUpperCase(), 200);
+          A.play('land', { heavy: true });
+          break;
       }
     }
   }
@@ -167,7 +219,23 @@ export class GameView {
     this.time += dt;
     if (events && events.length) this.handleEvents(match, events);
     for (const v of this.vf) v.anim.override = null;
-    const cinematic = this.runCinematic(match);
+    if (match.stage && (match.stage.area || 0) !== (this.arenaArea || 0)) this.loadArena(match.opts.arena, match.stage.area || 0);
+    if (this.arena && this.arena.sync) this.arena.sync(match.stage);
+    let cinematic = this.runCinematic(match);
+    if (!cinematic && match.phase === 'transition' && match.stage && match.stage.trans) {
+      // câmera da transição: acompanha a vítima arremessada para fora e depois desce no novo cenário
+      const tr = match.stage.trans, d = match.fighters[tr.def];
+      if (tr.f >= 38 && this._transFx !== match.frame - tr.f) {
+        // vítima atravessa o portão/piso: estilhaços e sangue
+        this._transFx = match.frame - tr.f;
+        for (let i = 0; i < 4; i++) this.blood.spark(d.x + tr.side * 0.3, 0.4 + i * 0.45, 0.2, 18, match.opts.arena === 'catedral' ? 0x9890a0 : 0x8a5a40, 1.8);
+        this.blood.burst(d.x, 1.0, 0.1, tr.side, 70, 1.4);
+        this.cam.shake(0.7); this.audio.play('explosion'); this.audio.play('land', { heavy: true });
+      }
+      if (tr.f < 90) this.cam.setCine(new THREE.Vector3(d.x - tr.side * 2.4, 1.6 + tr.f * 0.01, 5.0), new THREE.Vector3(d.x + tr.side * 0.6, Math.max(0.6, d.y + 0.8), 0), 3);
+      else this.cam.setCine(new THREE.Vector3(0, 4.5 - Math.min(1, (tr.f - 90) / 50) * 2.6, 7.5), new THREE.Vector3(0, 1.0, 0), 2.5);
+      cinematic = true;
+    }
     if (!cinematic) { this.cam.clearCine(); if (!match.fatal && !match.cine) this.cineCtx = null; }
     for (let i = 0; i < this.vf.length; i++) this.updateFighter(this.vf[i], match.fighters[i], match, dt);
     this.updateProjectiles(match, dt);
@@ -192,15 +260,16 @@ export class GameView {
     const tier = f.hp <= 250 ? 3 : f.hp <= 500 ? 2 : f.hp <= 750 ? 1 : 0;
     m.setDamageTier(tier);
     m.setFury(f.furyActive > 0, this.time);
+    m.update(dt, this.time, { fwdSpeed: (f.vx || 0) * f.facing * 10 + (f.pushV || 0) * -f.facing * 6, jolt: v.flash || 0 });
     // flash de impacto
     if (v.flash > 0) { v.flash = Math.max(0, v.flash - dt * 8); }
     // sangramento contínuo com pouca vida
     if (tier >= 3 && Math.random() < dt * 6 && !f.hidden) {
-      const wp = new THREE.Vector3(); m.rig.chest.getWorldPosition(wp); this.blood.drip(wp.x + (Math.random() - 0.5) * 0.2, wp.y, wp.z + 0.1);
+      const wp = this._v; m.rig.chest.getWorldPosition(wp); this.blood.drip(wp.x + (Math.random() - 0.5) * 0.2, wp.y, wp.z + 0.1);
     }
     // fúria: chamas na arma / mãos
     if (f.furyActive > 0 && !f.hidden) {
-      const tp = new THREE.Vector3(); m.rig.weaponTip.getWorldPosition(tp);
+      const tp = this._v; m.rig.weaponTip.getWorldPosition(tp);
       this.blood.aura(tp.x, tp.y, tp.z, 2, f.charId === 'varkhan' ? 0xff6010 : 0xff1030, 0.25, 0.03);
     }
     // visual da Corrente da Morte
@@ -329,13 +398,14 @@ export class GameView {
       v.model.root.position.set(d.x, 0, 0);
       v.model.root.rotation.y = d.facing > 0 ? Math.PI / 2 - 0.5 : -Math.PI / 2 + 0.5;
       v.model.root.visible = true;
-      v.model.setDamageTier(0); v.model.setFury(false);
+      v.model.setDamageTier(0); v.model.setFury(false); v.model.update(dt, this.time, {});
     });
     this.cam.clearCine();
     this.common(dt, dummies, 'showroom');
   }
 
   common(dt, fighters, mode) {
+    if (this.flashT > 0) { this.flashT = Math.max(0, this.flashT - dt); this.flashLight.intensity = this.flashPeak * (this.flashT / this.flashDur); } else this.flashLight.intensity = 0;
     this.blood.update(dt);
     this.vfx.update(dt);
     if (this.arena) this.arena.update(dt, this.time);

@@ -1,6 +1,13 @@
 import { chromium } from 'playwright-core';
 export const BASE = process.env.BASE || 'http://127.0.0.1:8090/index.html';
-const exe = process.env.CHROME || `${process.env.HOME}/.cache/ms-playwright/chromium-1254/chrome-linux64/chrome`;
+import fs from 'node:fs';
+// procura o Chromium baixado por `npx playwright-core install chromium` (qualquer versão)
+function findChrome() {
+  const dir = `${process.env.HOME}/.cache/ms-playwright`;
+  const vers = fs.existsSync(dir) ? fs.readdirSync(dir).filter((d) => /^chromium-\d+$/.test(d)).sort() : [];
+  return vers.length ? `${dir}/${vers[vers.length - 1]}/chrome-linux64/chrome` : undefined;
+}
+const exe = process.env.CHROME || findChrome();
 export async function launch() {
   return chromium.launch({ executablePath: exe, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 }
@@ -13,7 +20,7 @@ export async function open(browser, opts = {}) {
   page.on('requestfailed', (r) => logs.push('requestfailed: ' + r.url()));
   page.on('response', (r) => { if (r.status() >= 400 && !r.url().endsWith('favicon.ico')) logs.push('http ' + r.status() + ': ' + r.url()); });
   await page.goto(BASE + (BASE.includes('?') ? '&' : '?') + 'debug=1');
-  await page.waitForFunction(() => window.SANG);
+  await page.waitForFunction(() => window.SANG, null, { timeout: 90000 });
   return { page, logs, ctx };
 }
 export const st = (page) => page.evaluate(() => SANG.state());

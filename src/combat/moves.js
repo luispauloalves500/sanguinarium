@@ -61,6 +61,10 @@ const varkhanMoves = {
   execucao: mv('execucao', 'Execução Carmesim', 52, [hit(10, 16, [0.2, 0.5, 1.7, 1.9], 0, 'mid', { effect: 'cinematic', bs: 12, push: 0.1 })],
     { kind: 'super', anim: 'superStart', vel: [{ f0: 4, f1: 12, vx: 0.18 }], invuln: [0, 10],
       seq: { dur: 130, hits: [{ f: 28, dmg: 70 }, { f: 52, dmg: 70 }, { f: 76, dmg: 80 }, { f: 108, dmg: 110 }] } }),
+  // 2º supergolpe (GDD §8): correntes espectrais prendem o réu diante do tribunal
+  tribunal: mv('tribunal', 'Tribunal dos Condenados', 56, [hit(13, 19, [0.3, 0.6, 3.0, 1.7], 0, 'mid', { effect: 'cinematic', bs: 14, push: 0.08, chain: true })],
+    { kind: 'super', anim: 'chainCast', invuln: [0, 12],
+      seq: { dur: 170, hits: [{ f: 40, dmg: 50 }, { f: 62, dmg: 50 }, { f: 84, dmg: 50 }, { f: 140, dmg: 170 }] } }),
 };
 varkhanMoves.lp.chainName = 'Sentença Tripla';
 
@@ -116,6 +120,10 @@ const lilithMoves = {
   eclipse: mv('eclipse', 'Eclipse Sangrento', 50, [hit(8, 14, [0.2, 0.5, 2.0, 2.0], 0, 'mid', { effect: 'cinematic', bs: 12, push: 0.1 })],
     { kind: 'super', anim: 'superStart', invuln: [0, 8],
       seq: { dur: 130, hits: [{ f: 30, dmg: 60 }, { f: 50, dmg: 60 }, { f: 70, dmg: 60 }, { f: 110, dmg: 140 }] } }),
+  // 2º supergolpe (nome proposto): círculo ritual no chão — golpe BAIXO, precisa de defesa agachada
+  saba: mv('saba', 'Sabá Sangrento', 50, [hit(14, 20, [0.4, 0, 2.6, 0.5], 0, 'low', { effect: 'cinematic', bs: 14, push: 0.06 })],
+    { kind: 'super', anim: 'castLow', invuln: [0, 12],
+      seq: { dur: 160, hits: [{ f: 34, dmg: 45 }, { f: 52, dmg: 45 }, { f: 70, dmg: 45 }, { f: 88, dmg: 45 }, { f: 132, dmg: 150 }] } }),
 };
 lilithMoves.lp.chainName = 'Dança Carmesim';
 
@@ -157,7 +165,7 @@ export const CHARACTERS = {
       { move: 'ruptura', cmd: SPECIAL_CMDS.ddP, simple: 'd' },
       { move: 'ira', cmd: SPECIAL_CMDS.ddK },
     ],
-    superMove: 'execucao',
+    superMove: 'execucao', superMove2: 'tribunal',
     throwName: 'Forca de Correntes', throwDmg: 110,
     transform: 'Carrasco do Inferno',
     combos: [
@@ -170,6 +178,8 @@ export const CHARACTERS = {
     fatalities: [
       { id: 'execucao_real', name: 'Execução Real', motion: [2, 6, 2], btn: 'hp', range: [0, 2.0], label: '↓ → ↓ + K (perto)', simple: 'n' },
       { id: 'machado_condenacao', name: 'Machado da Condenação', motion: [4, 6, 4], btn: 'hk', range: [2.6, 99], label: '← → ← + I (longe)', simple: 'd' },
+      { id: 'correntes_suplicio', name: 'Correntes do Suplício', motion: [6, 4, 6], btn: 'lp', range: [1.4, 3.8], label: '→ ← → + J (média)', simple: 'f', proposal: true },
+      { id: 'ruptura_infernal', name: 'Ruptura Infernal', motion: [2, 2, 2], btn: 'lk', range: [0, 2.3], label: '↓ ↓ ↓ + U (perto)', simple: 'b', proposal: true },
     ],
     ai: { preferred: 2.4, zoning: 0.45, aggression: 0.55, specials: ['machado', 'corrente', 'ruptura', 'passo', 'julgamento', 'tormenta', 'ira', 'prisao'] },
   },
@@ -188,7 +198,7 @@ export const CHARACTERS = {
       { move: 'regen', cmd: SPECIAL_CMDS.ddP },
       { move: 'teleporte', cmd: SPECIAL_CMDS.ddK, simple: 'b' },
     ],
-    superMove: 'eclipse',
+    superMove: 'eclipse', superMove2: 'saba',
     throwName: 'Beijo de Sangue', throwDmg: 100, throwHeal: 25,
     transform: 'Rainha do Sangue',
     combos: [
@@ -201,6 +211,8 @@ export const CHARACTERS = {
     fatalities: [
       { id: 'explosao_carmesim', name: 'Explosão Carmesim', motion: [2, 6, 6], btn: 'hp', range: [1.2, 4.5], label: '↓ → → + K (média)', simple: 'n' },
       { id: 'ritual_proibido', name: 'Ritual Proibido', motion: [4, 4, 2], btn: 'hk', range: [0, 2.4], label: '← ← ↓ + I (perto)', simple: 'd' },
+      { id: 'beijo_morte', name: 'Beijo da Morte', motion: [6, 6, 2], btn: 'lp', range: [0, 2.0], label: '→ → ↓ + J (perto)', simple: 'f', proposal: true },
+      { id: 'chuva_final', name: 'Chuva de Lanças Final', motion: [4, 2, 4], btn: 'lk', range: [2.4, 99], label: '← ↓ ← + U (longe)', simple: 'b', proposal: true },
     ],
     ai: { preferred: 3.4, zoning: 0.65, aggression: 0.45, specials: ['lanca', 'espinhos', 'chuva', 'garra', 'teleporte', 'clone', 'veu', 'regen'] },
   },
@@ -230,6 +242,7 @@ export const ARENAS = {
 
 // golpes genéricos compartilhados (transformação)
 for (const ch of Object.values(CHARACTERS)) {
+  ch.moves.empurra_estatua = { id: 'empurra_estatua', name: 'Estátua do Carrasco', frames: 26, hits: [], kind: 'interact', cancel: [], anim: 'grab' };
   ch.moves.fury_on = { id: 'fury_on', name: ch.transform, frames: 40, hits: [], kind: 'transform', cancel: [], anim: 'roar', invuln: [0, 40] };
 }
 // duração e distância canônica das finalizações (timeline cinematográfica)
@@ -238,5 +251,9 @@ const FAT_META = {
   machado_condenacao: { dur: 300, dist: 3.4 },
   explosao_carmesim: { dur: 290, dist: 2.2 },
   ritual_proibido: { dur: 330, dist: 1.6 },
+  correntes_suplicio: { dur: 320, dist: 2.6 },
+  ruptura_infernal: { dur: 300, dist: 1.5 },
+  beijo_morte: { dur: 310, dist: 0.85 },
+  chuva_final: { dur: 320, dist: 3.4 },
 };
 for (const ch of Object.values(CHARACTERS)) for (const f of ch.fatalities) Object.assign(f, FAT_META[f.id]);

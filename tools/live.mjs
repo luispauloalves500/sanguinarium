@@ -1,0 +1,21 @@
+// Verifica a build publicada (GitHub Pages): carrega, joga uma partida CPU x CPU curta e coleta erros de console.
+import { launch, open, waitFor } from './lib.mjs';
+const URL = process.argv[2] || 'https://luispauloalves500.github.io/sanguinarium/';
+const OUT = process.argv[3];
+const b = await launch();
+const ctx = await b.newContext({ viewport: { width: 1280, height: 720 } });
+const page = await ctx.newPage();
+const errs = []; const fails = [];
+page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+page.on('response', (r) => { if (r.status() >= 400) fails.push(r.status() + ' ' + r.url()); });
+await page.goto(URL + '?debug=1', { waitUntil: 'load' });
+await page.waitForFunction(() => window.SANG, null, { timeout: 60000 });
+const ver = await page.evaluate(() => window.SANG.version || null);
+await page.evaluate(() => SANG.start({ p1: 'varkhan', p2: 'lilith', arena: 'catedral', mode: 'cpu', difficulty: 2, cpu1: true }));
+await page.waitForFunction(() => SANG.match.phase === 'fight', null, { timeout: 60000 });
+await new Promise((r) => setTimeout(r, 8000));
+const s = await page.evaluate(() => ({ frame: SANG.match.frame, hp: SANG.match.fighters.map((f) => f.hp), appErrors: SANG.app.errors }));
+if (OUT) await page.screenshot({ path: OUT });
+console.log(JSON.stringify({ url: URL, version: ver, ...s, consoleErrors: errs, httpFailures: fails, ok: !errs.length && !fails.length && !s.appErrors.length && s.frame > 100 }));
+await b.close();

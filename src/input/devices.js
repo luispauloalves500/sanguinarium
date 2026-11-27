@@ -11,6 +11,15 @@ export const KEYMAP_P2 = {
   Numpad1: 'lp', Numpad2: 'hp', Numpad4: 'lk', Numpad5: 'hk', Numpad3: 'block', Numpad6: 'grab', Numpad0: 'dodge', NumpadAdd: 'special',
   Insert: 'lp', Home: 'hp', Delete: 'lk', End: 'hk', PageDown: 'block', PageUp: 'grab', ShiftRight: 'dodge', Enter: 'special',
 };
+export const ACTIONS = ['up', 'down', 'left', 'right', 'lp', 'hp', 'lk', 'hk', 'block', 'grab', 'dodge', 'special'];
+export const ACTION_LABEL = { up: 'Cima', down: 'Baixo', left: 'Esquerda', right: 'Direita', lp: 'Soco rápido', hp: 'Soco forte', lk: 'Chute rápido', hk: 'Chute forte', block: 'Bloqueio', grab: 'Agarrão', dodge: 'Esquiva', special: 'Especial simplificado' };
+export function keyName(code) {
+  if (!code) return '—';
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Numpad')) return 'Num' + code.slice(6);
+  return { Space: 'Espaço', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', ShiftLeft: 'Shift esq.', ShiftRight: 'Shift dir.', ControlLeft: 'Ctrl esq.', ControlRight: 'Ctrl dir.', Semicolon: 'Ç/;', Comma: ',', Period: '.', Slash: '/' }[code] || code;
+}
 // No modo 1 jogador, as setas também controlam o P1
 const ARROWS_P1 = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 
@@ -22,8 +31,11 @@ export class InputDevices {
     this.queue = []; this.cur = this.keys;
     this.touchBits = 0; this.touchLatch = 0; this.curLatch = 0; // latch: toque curto visto em pelo menos 1 passo
     this.twoPlayers = false;
+    this.map1 = { ...KEYMAP_P1 };
+    this.capture = null; // remapeamento: próxima tecla vai para este callback
     this.listeners = [];
     window.addEventListener('keydown', (e) => {
+      if (this.capture) { e.preventDefault(); const cb = this.capture; this.capture = null; cb(e.code); return; }
       if (e.repeat) { if (this.isGameKey(e.code)) e.preventDefault(); return; }
       this.keys.add(e.code);
       if (this.isGameKey(e.code) || e.code in ARROWS_P1) this.snap();
@@ -43,7 +55,23 @@ export class InputDevices {
   beginStep() { this.cur = this.queue.length ? this.queue.shift() : this.keys; this.curLatch = this.touchLatch; this.touchLatch = 0; }
   clearQueue() { this.queue.length = 0; this.cur = this.keys; }
   onKey(fn) { this.listeners.push(fn); }
-  isGameKey(code) { return code in KEYMAP_P1 || code in KEYMAP_P2; }
+  isGameKey(code) { return code in this.map1 || code in KEYMAP_P2; }
+  // mapa do P1 no formato { ação: código }
+  getBindings() { const out = {}; for (const [code, a] of Object.entries(this.map1)) if (!out[a]) out[a] = code; return out; }
+  setBindings(b) {
+    const map = {};
+    for (const a of ACTIONS) { const code = (b && b[a]) || Object.keys(KEYMAP_P1).find((c) => KEYMAP_P1[c] === a); if (code) map[code] = a; }
+    this.map1 = map; this.keys.clear(); this.clearQueue();
+  }
+  // troca a tecla de uma ação; se a tecla já era de outra ação, as duas trocam
+  rebind(action, code) {
+    const b = this.getBindings();
+    const other = ACTIONS.find((a) => a !== action && b[a] === code);
+    if (other) b[other] = b[action];
+    b[action] = code;
+    this.setBindings(b);
+    return this.getBindings();
+  }
   bitsFromMap(map) {
     let b = 0;
     for (const code of this.cur) { const a = map[code]; if (a) b |= BTN[a]; }
@@ -63,7 +91,7 @@ export class InputDevices {
   }
   read(player) {
     if (player === 0) {
-      let b = this.bitsFromMap(KEYMAP_P1) | this.touchBits | this.curLatch | this.gamepadBits(0);
+      let b = this.bitsFromMap(this.map1) | this.touchBits | this.curLatch | this.gamepadBits(0);
       if (!this.twoPlayers) b |= this.bitsFromMap(ARROWS_P1);
       return clean(b);
     }

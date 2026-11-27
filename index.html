@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0a0000">
 <title>SANGUINARIUM — Pacto de Sangue</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M8 1C8 1 3 7 3 10a5 5 0 0 0 10 0C13 7 8 1 8 1z%22 fill=%22%23a00010%22/%3E%3C/svg%3E">
 <link rel="stylesheet" href="./style.css">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="flash"></div>
+<div id="fade"></div>
 
 <div id="hud" class="hidden">
   <div class="hud-top">
@@ -36,6 +38,9 @@
     <div class="meters p1"><div class="segs" id="seg1"><i></i><i></i><i></i></div><div class="fury"><div id="fury1"></div><span>FÚRIA</span></div></div>
     <div class="meters p2"><div class="segs" id="seg2"><i></i><i></i><i></i></div><div class="fury"><div id="fury2"></div><span>FÚRIA</span></div></div>
   </div>
+  <div class="hint h1" id="hint1"></div>
+  <div class="hint h2" id="hint2"></div>
+  <div class="stage-name" id="stageName"></div>
   <div class="combo c1" id="combo1"></div>
   <div class="combo c2" id="combo2"></div>
   <div id="announce"></div>
@@ -61,6 +66,7 @@
   <section id="scr-main" class="screen hidden">
     <div class="logo small"><h1>SANGUINARIUM</h1><h2>PACTO DE SANGUE</h2></div>
     <nav class="menu" id="mainMenu">
+      <button data-act="arcade">Modo Arcade</button>
       <button data-act="cpu">1 Jogador vs CPU</button>
       <button data-act="versus">2 Jogadores (local)</button>
       <button data-act="training">Treinamento</button>
@@ -88,6 +94,9 @@
   <section id="scr-options" class="screen hidden panel">
     <h3 class="title">OPÇÕES</h3>
     <div class="opts" id="optList"></div>
+    <h4 class="opt-sub">CONTROLES DO JOGADOR 1 (TECLADO)</h4>
+    <div class="opts keymap" id="keymapList"></div>
+    <div class="row"><button id="keymapReset">Restaurar teclas padrão</button></div>
     <div class="row"><button class="back" data-back="main">Voltar</button></div>
   </section>
   <section id="scr-moves" class="screen hidden panel">
@@ -99,7 +108,7 @@
   <section id="scr-credits" class="screen hidden panel">
     <h3 class="title">CRÉDITOS</h3>
     <div class="credits">
-      <p><b>SANGUINARIUM — Pacto de Sangue</b><br>Primeira versão jogável (v0.1.0)</p>
+      <p><b>SANGUINARIUM — Pacto de Sangue</b><br>Versão jogável v0.2.0</p>
       <p>Design: GDD v1.0 de Luis Paulo Alves</p>
       <p>Universo, personagens, sons e trilha originais. Inspirado no gênero de luta 2.5D; nenhum recurso proprietário de outras franquias foi utilizado.</p>
       <p>Motor 3D: Three.js (MIT). Modelos, texturas, efeitos e áudio gerados proceduralmente.</p>
@@ -115,6 +124,11 @@
       <button data-act="quit">Sair para o menu</button>
     </nav>
   </section>
+  <section id="scr-ending" class="screen hidden panel">
+    <h3 class="title" id="endTitle">FINAL</h3>
+    <div class="credits ending" id="endText"></div>
+    <nav class="menu" id="endMenu"><button data-act="quit">Menu principal</button></nav>
+  </section>
   <section id="scr-results" class="screen hidden dim">
     <h3 class="title" id="resTitle">VITÓRIA</h3>
     <p id="resSub" class="sub"></p>
@@ -126,6 +140,7 @@
     </nav>
   </section>
 </div>
+<div id="fps" class="hidden"></div>
 <div id="loading">Carregando o Abismo…</div>
 <script type="module" src="./src/main.js"></script>
 </body>

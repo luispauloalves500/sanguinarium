@@ -1,11 +1,13 @@
 // HUD de combate (DOM): vida, rounds, cronômetro, energia, fúria, combos e avisos.
 import * as C from '../core/constants.js';
+import { interactionFor } from '../combat/arena.js';
 const $ = (id) => document.getElementById(id);
 
 export class Hud {
   constructor() {
     this.el = $('hud');
-    this.ann = $('announce'); this.msgEl = $('msg'); this.flashEl = $('flash');
+    this.ann = $('announce'); this.msgEl = $('msg'); this.flashEl = $('flash'); this.fadeEl = $('fade');
+    this.hintEls = [$('hint1'), $('hint2')]; this.stageEl = $('stageName'); this.stageT = 0; this._hint = ['', ''];
     this.annTimer = 0; this.msgTimer = 0; this.comboT = [0, 0];
     this.reduceFlash = false;
     this.lastText = [];
@@ -44,6 +46,7 @@ export class Hud {
     for (let i = 0; i < 2; i++) {
       if (this.comboT[i] > 0 && (this.comboT[i] -= steps) <= 0) $('combo' + (i + 1)).classList.remove('on');
     }
+    this.updateStage(match, steps);
     if (this.annTimer > 0 && (this.annTimer -= steps) <= 0) this.ann.classList.remove('on');
     if (this.msgTimer > 0 && (this.msgTimer -= steps) <= 0) this.msgEl.classList.remove('on');
   }
@@ -53,6 +56,26 @@ export class Hud {
     this.ann.classList.remove('on'); void this.ann.offsetWidth; this.ann.classList.add('on');
     this.annTimer = frames;
     this.lastText.push(text); if (this.lastText.length > 50) this.lastText.shift();
+  }
+  // dicas de elemento interativo, nome do cenário e escurecimento da transição
+  updateStage(match, steps) {
+    const st = match.stage;
+    let fade = 0;
+    if (match.phase === 'transition' && st && st.trans) {
+      const f = st.trans.f;
+      fade = f < 55 ? 0 : f < 85 ? (f - 55) / 30 : f < 95 ? 1 : Math.max(0, 1 - (f - 95) / 30);
+    }
+    if (this.fadeEl) this.fadeEl.style.opacity = fade.toFixed(3);
+    match.fighters.forEach((f, i) => {
+      const it = match.phase === 'fight' ? interactionFor(st, f) : null;
+      const txt = it ? `↑ + O · ${it.name}` : '';
+      if (txt !== this._hint[i]) { this._hint[i] = txt; if (this.hintEls[i]) { if (txt) this.hintEls[i].textContent = txt; this.hintEls[i].classList.toggle('on', !!txt); } }
+    });
+    if (this.stageT > 0 && (this.stageT -= steps) <= 0 && this.stageEl) this.stageEl.classList.remove('on');
+  }
+  showStageName(text, frames = 180) {
+    if (!this.stageEl) return;
+    this.stageEl.textContent = text; this.stageEl.classList.add('on'); this.stageT = frames;
   }
   clearAnnounce() { this.ann.classList.remove('on'); this.annTimer = 0; }
   message(text, size = 'small', frames = 50) {

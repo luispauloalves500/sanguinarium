@@ -16,7 +16,7 @@ export class Animator {
 
   target(f, match, time) {
     const out = this.tmp;
-    let lie = 0, spin = 0, zoff = 0, lift = 0, tilt = 0, speed = 18;
+    let lie = 0, spin = 0, zoff = 0, lift = 0, tilt = 0, speed = 18, flip = 0;
     const st = f.state;
     const breathe = Math.sin(time * 2.2 + f.idx) * 0.035;
     const set = (name) => Object.assign(out, POSES[name]);
@@ -57,6 +57,7 @@ export class Animator {
         }
         case 'crouch': set(f.blocking ? 'crouchBlock' : 'crouch'); break;
         case 'blockstun': set(f.crouching ? 'crouchBlock' : 'block'); zoff = 0; tilt = -0.06; break;
+        case 'vault': set('jumpUp'); flip = Math.min(1, f.sf / 34) * Math.PI * 2; speed = 16; break;
         case 'jumpsquat': case 'land': set('land'); speed = 30; break;
         case 'air': set(f.vy > 0.02 ? 'jumpUp' : 'jumpDown'); if (f.jumpDir !== 0 && f.vy > -0.1) spin = 0; speed = 12; break;
         case 'hitstun': set(f.comboHits % 2 ? 'hitHigh' : 'hitLow'); speed = 40; break;
@@ -77,7 +78,8 @@ export class Animator {
         default: set('stance');
       }
     }
-    return { pose: out, lie, spin, zoff, lift, tilt, speed };
+    const air = st === 'air' || st === 'juggle' || st === 'thrown' || (f.y || 0) > 0.05;
+    return { pose: out, lie, spin, zoff, lift, tilt, speed, air, plant: st !== 'walk', flip };
   }
 
   update(f, match, time, dt) {
@@ -92,6 +94,8 @@ export class Animator {
     this.lift += (t.lift - this.lift) * k2;
     this.tilt += (t.tilt - this.tilt) * k2;
     this.spin = t.spin; // giro é direto
+    this.flip = t.flip || 0;
+    this.air = !!t.air; this.plant = t.plant !== false;
     return this.cur;
   }
 }
