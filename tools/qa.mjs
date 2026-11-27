@@ -284,7 +284,7 @@ try {
     await tap(page, 'Enter'); await sleep(600); // Modo Arcade (1º item)
     let s = await st(page);
     await shot(page, '27-arcade-selecao');
-    check('Arcade: menu abre a seleção com a escada', s.screen === 'select' && (await page.evaluate(() => document.querySelectorAll('.ladder li').length)) === 4);
+    check('Arcade: menu abre a seleção com a escada', s.screen === 'select' && (await page.evaluate(() => document.querySelectorAll('.ladder li').length)) === 6);
     await tap(page, 'KeyJ'); await sleep(1200);
     s = await st(page);
     check('Arcade: luta 1 começa contra Lilith no Coliseu', s.app === 'fight' && s.match.fighters[1].char === 'lilith', { f: s.match && s.match.fighters.map((f) => f.char) });
@@ -300,12 +300,12 @@ try {
     check('Arcade: vitória oferece "Próxima luta"', btns[0] === 'next', { btns });
     await page.click('#resultMenu button[data-act="next"]'); await sleep(800);
     s = await st(page);
-    check('Arcade: luta 2 é contra Kazuro na Catedral (v0.3: 3 rivais + espelho)', s.match.fighters[1].char === 'kazuro', { f: s.match.fighters.map((f) => f.char) });
-    await page.evaluate(() => { SANG.app.arcade.stage = 2; });
+    check('Arcade: luta 2 é contra Kazuro na Catedral (v0.4: 5 rivais + espelho)', s.match.fighters[1].char === 'kazuro', { f: s.match.fighters.map((f) => f.char) });
+    await page.evaluate(() => { SANG.app.arcade.stage = 4; });
     await winNow();
     await page.click('#resultMenu button[data-act="next"]'); await sleep(800);
     s = await st(page);
-    check('Arcade: luta 4 é o Reflexo Sombrio (espelho)', s.match.fighters[1].char === 'varkhan' && (await page.evaluate(() => SANG.app.arcade.stage)) === 3, {});
+    check('Arcade: luta 6 é o Reflexo Sombrio (espelho)', s.match.fighters[1].char === 'varkhan' && (await page.evaluate(() => SANG.app.arcade.stage)) === 5 && (await page.evaluate(() => SANG.app.arcade.ladder.length)) === 6, {});
     await winNow();
     btns = await page.evaluate(() => [...document.querySelectorAll('#resultMenu button')].map((b) => b.dataset.act));
     check('Arcade: última vitória oferece "Ver o final"', btns[0] === 'ending', { btns });
@@ -356,10 +356,10 @@ try {
     const cards = await page.evaluate(() => document.querySelectorAll('#scr-select .pick')[0].querySelectorAll('.card').length);
     await page.evaluate(() => { document.querySelectorAll('#scr-select .card[data-p="0"]')[2].click(); document.querySelectorAll('#scr-select .card[data-p="1"]')[3] && document.querySelectorAll('#scr-select .card[data-p="1"]')[3].click(); });
     await sleep(300);
-    await shot(page, '30-selecao-4-lutadores');
-    check('v0.3: seleção com 4 lutadores (Kazuro e Brakkor)', cards === 4, { cards });
+    await shot(page, '30-selecao-6-lutadores');
+    check('v0.4: seleção com 6 lutadores (Nymera e Pestilus)', cards === 6, { cards });
     const tabs = await page.evaluate(() => [...document.querySelectorAll('#moveTabs button')].map((b) => b.dataset.ch));
-    check('v0.3: lista de golpes com abas dos 4 lutadores', tabs.join() === 'varkhan,lilith,kazuro,brakkor,controls', { tabs });
+    check('v0.4: lista de golpes com abas dos 6 lutadores', tabs.join() === 'varkhan,lilith,kazuro,brakkor,nymera,pestilus,controls', { tabs });
     // Kazuro: Corte Espectral (↓↘→ + J) e Brakkor: Esmagamento (↓↙← + J, agarrão de comando)
     await page.evaluate(() => { SANG.start({ p1: 'kazuro', p2: 'brakkor', arena: 'catedral', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; });
     await waitFor(page, () => SANG.match.phase === 'fight');
@@ -391,7 +391,17 @@ try {
     ['brakkor', 'lilith', 'catedral', 'fornalha_infernal', 1.5, [4, 6, 2], 'KeyI', 150],
     ['brakkor', 'kazuro', 'coliseu', 'esmagamento_sismico', 2.2, [2, 6, 6], 'KeyU', 150],
     ['brakkor', 'varkhan', 'catedral', 'rasgo_duplo', 1.0, [6, 6, 4], 'KeyJ', 150],
+    ['nymera', 'brakkor', 'templo', 'estilhacos_humanos', 1.6, [2, 6, 2], 'KeyK', 185],
+    ['nymera', 'varkhan', 'forja', 'frio_absoluto', 3.2, [4, 6, 6], 'KeyI', 215],
+    ['nymera', 'lilith', 'templo', 'coracao_gelo', 0.9, [6, 6, 4], 'KeyJ', 110],
+    ['nymera', 'kazuro', 'catedral', 'prisao_cristalina', 2.4, [2, 2, 6], 'KeyU', 120],
+    ['pestilus', 'varkhan', 'forja', 'decomposicao', 1.8, [2, 4, 2], 'KeyK', 150],
+    ['pestilus', 'brakkor', 'templo', 'ultimo_experimento', 1.1, [6, 4, 6], 'KeyI', 176],
+    ['pestilus', 'lilith', 'forja', 'enxame_faminto', 3.2, [4, 4, 6], 'KeyJ', 130],
+    ['pestilus', 'kazuro', 'coliseu', 'dissecacao', 1.2, [2, 2, 4], 'KeyU', 145],
   ];
+  // v0.4: a cabeça de um lutador alto não sai pelo topo do quadro nas cinemáticas (Brakkor)
+  const headTop = (page, i) => page.evaluate((i) => { const v = SANG.app.view, h = v.vf[i].model.rig.head; const p = new h.position.constructor(); h.getWorldPosition(p); p.y += 0.15; p.project(v.cam.camera); return { x: +p.x.toFixed(2), y: +p.y.toFixed(2) }; }, i);
   let idx3 = 40;
   for (const [p1, p2, arena, id, dist, motion, btn, frame] of FAT3) {
     const { page, logs } = await open(browser);
@@ -408,17 +418,18 @@ try {
     if (ok) {
       await waitFor(page, (fr) => SANG.match.phase !== 'fatality' || SANG.match.fatal.f >= fr, frame);
       await shot(page, `${idx3}-fatalidade-${id}`);
+      if (p1 === 'brakkor') { const h = await headTop(page, 0); check(`v0.4: cabeça do Brakkor dentro do quadro na finalização ${id}`, !(Math.abs(h.x) < 1 && h.y > 1), h); }
       await waitFor(page, () => SANG.match.phase === 'matchEnd', null, 60000);
     }
     const s = await st(page);
-    check(`v0.3: Sentença de Sangue por teclado: ${id}`, ok && s.match.result && s.match.result.fatality === id, { result: s.match.result });
+    check(`${['nymera', 'pestilus'].includes(p1) ? 'v0.4' : 'v0.3'}: Sentença de Sangue por teclado: ${id}`, ok && s.match.result && s.match.result.fatality === id, { result: s.match.result });
     report.errors.push(...logs, ...s.errors);
     idx3++;
     await page.close();
   }
-  for (const [p1, p2, sid, alt, n] of [['kazuro', 'varkhan', 'tempestade', false, 50], ['kazuro', 'lilith', 'despertar', true, 51], ['brakkor', 'lilith', 'apocalipse', false, 52], ['brakkor', 'kazuro', 'banquete', true, 53]]) {
+  for (const [p1, p2, sid, alt, n] of [['kazuro', 'varkhan', 'tempestade', false, 50], ['kazuro', 'lilith', 'despertar', true, 51], ['brakkor', 'lilith', 'apocalipse', false, 52], ['brakkor', 'kazuro', 'banquete', true, 53], ['nymera', 'brakkor', 'inverno_eterno', false, 54], ['nymera', 'varkhan', 'tumulo_gelo', true, 55], ['pestilus', 'lilith', 'pandemia', false, 56], ['pestilus', 'kazuro', 'praga_negra', true, 57]]) {
     const { page, logs } = await open(browser);
-    await page.evaluate(([p1, p2]) => { SANG.start({ p1, p2, arena: p1 === 'kazuro' ? 'catedral' : 'coliseu', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; }, [p1, p2]);
+    await page.evaluate(([p1, p2]) => { SANG.start({ p1, p2, arena: { kazuro: 'catedral', brakkor: 'coliseu', nymera: 'templo', pestilus: 'forja' }[p1], mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; }, [p1, p2]);
     await waitFor(page, () => SANG.match.phase === 'fight');
     let got = null;
     for (let tries = 0; tries < 4 && !got; tries++) {
@@ -428,7 +439,8 @@ try {
       got = await waitFor(page, () => SANG.match.cine && SANG.match.cine.f > 100, null, 8000).then(() => page.evaluate(() => SANG.match.cine.id)).catch(() => null);
     }
     await shot(page, `${n}-supergolpe-${sid}`);
-    check(`v0.3: supergolpe ${alt ? '2 (S+U+I)' : '1 (U+I)'} por teclado: ${sid}`, got === sid, { got });
+    if (p1 === 'brakkor' || p2 === 'brakkor') { const h = await headTop(page, p1 === 'brakkor' ? 0 : 1); check(`v0.4: cabeça do Brakkor dentro do quadro no supergolpe ${sid}`, !(Math.abs(h.x) < 1 && h.y > 1), h); }
+    check(`${['nymera', 'pestilus'].includes(p1) ? 'v0.4' : 'v0.3'}: supergolpe ${alt ? '2 (S+U+I)' : '1 (U+I)'} por teclado: ${sid}`, got === sid, { got });
     await waitFor(page, () => !SANG.match.cine, null, 20000).catch(() => {});
     const s = await st(page);
     report.errors.push(...logs, ...s.errors);
@@ -450,6 +462,89 @@ try {
     report.errors.push(...logs, ...s.errors);
     await page.close();
   }
+  // ---------------------------------------------------------------- v0.4: Nymera e Pestilus por teclado
+  {
+    const { page, logs } = await open(browser);
+    const hook = () => page.evaluate(() => { window._mv = []; const m = SANG.match; const orig = m.emit.bind(m); m.emit = (e) => { if (e.type === 'move' || e.type === 'proj' || e.type === 'burst' || e.type === 'freeze' || e.type === 'poison') window._mv.push(e.type === 'move' ? e.id : e.type === 'proj' ? e.kind : e.type); orig(e); }; const [f, o] = m.fighters; f.x = -2.5; o.x = 1.5; });
+    await page.evaluate(() => { SANG.start({ p1: 'nymera', p2: 'kazuro', arena: 'templo', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; });
+    await waitFor(page, () => SANG.match.phase === 'fight');
+    await hook(); await sleep(300);
+    let got = false;
+    for (let t = 0; t < 3 && !got; t++) { await keys(page, [['KeyS'], ['KeyS', 'KeyD'], ['KeyD', 'KeyJ'], []], 60); await sleep(350); if (!got) { await sleep(200); } got = await page.evaluate(() => window._mv.includes('icelance')); }
+    await shot(page, '60-nymera-lanca-gelo');
+    check('v0.4: Nymera — Lança de Gelo (↓→+J) por teclado', got, { mv: await page.evaluate(() => window._mv.slice(-6)) });
+    await page.evaluate(() => { const [f, o] = SANG.match.fighters; f.x = -1.0; o.x = 1.5; window._mv.length = 0; });
+    await sleep(500);
+    await keys(page, [['KeyS'], ['KeyS', 'KeyA'], ['KeyA', 'KeyU'], []], 60);
+    await sleep(900);
+    got = await page.evaluate(() => window._mv.includes('trap'));
+    await shot(page, '61-nymera-armadilha');
+    check('v0.4: Nymera — Armadilha de Gelo (↓←+U) por teclado', got, { mv: await page.evaluate(() => window._mv.slice(-6)) });
+    await page.evaluate(() => { SANG.start({ p1: 'pestilus', p2: 'brakkor', arena: 'forja', mode: 'cpu', difficulty: 0 }); SANG.app.ctrl[1] = null; });
+    await waitFor(page, () => SANG.match.phase === 'fight');
+    await hook(); await sleep(300);
+    await page.evaluate(() => { const [f, o] = SANG.match.fighters; f.x = -3.2; o.x = 3.2; });
+    got = false;
+    for (let t = 0; t < 3 && !got; t++) { await keys(page, [['KeyS'], ['KeyS', 'KeyD'], ['KeyD', 'KeyJ'], []], 60); await sleep(1400); got = await page.evaluate(() => window._mv.includes('bomb') && window._mv.includes('burst')); }
+    await sleep(300);
+    await shot(page, '62-pestilus-bomba-nuvem');
+    check('v0.4: Pestilus — Bomba Tóxica (↓→+J) faz arco e vira nuvem', got, { mv: await page.evaluate(() => window._mv.slice(-8)) });
+    await page.evaluate(() => { const [f, o] = SANG.match.fighters; f.x = -2.5; o.x = 1.0; window._mv.length = 0; });
+    await sleep(500);
+    await keys(page, [['KeyA'], ['KeyD', 'KeyJ'], []], 60);
+    await sleep(900);
+    const pois = await page.evaluate(() => ({ mv: window._mv.slice(-8), poison: SANG.match.fighters[1].poison }));
+    await shot(page, '63-pestilus-seringa-veneno');
+    check('v0.4: Pestilus — Seringa Venenosa (←→+J) envenena', pois.mv.includes('syringe') && (pois.poison > 0 || pois.mv.includes('poison')), pois);
+    report.errors.push(...logs, ...(await st(page)).errors);
+    await page.close();
+  }
+  // ---------------------------------------------------------------- v0.4: remapeamento do J2 e do gamepad
+  {
+    const { page, logs } = await open(browser);
+    await page.evaluate(() => { SANG.app.screens.show('options'); });
+    await sleep(300);
+    await page.click('#keymapWho button[data-w="k1"]'); await sleep(200);
+    await page.click('#keymapList button[data-a="lp"]');
+    await tap(page, 'Numpad7'); await sleep(300);
+    const lbl = await page.evaluate(() => document.querySelector('#keymapList button[data-a="lp"]').textContent);
+    await page.click('#keymapList button[data-a="grab"]');
+    await tap(page, 'Numpad9'); await sleep(300);
+    await page.click('#keymapList button[data-a="hp"]');
+    await tap(page, 'KeyJ'); await sleep(300);
+    const note = await page.evaluate(() => document.getElementById('keymapNote').textContent);
+    await shot(page, '64-opcoes-remap-j2');
+    const saved = await page.evaluate(() => JSON.parse(SANG.app.settings.keymap2 || '{}'));
+    check('v0.4: remapeamento do J2 (Soco rápido -> Num7) salvo', lbl === 'Num7' && saved.lp === 'Numpad7' && saved.grab === 'Numpad9', { lbl, saved });
+    check('v0.4: tecla do J1 é recusada para o J2', /Jogador 1/.test(note), { note });
+    // gamepad falso (navigator.getGamepads) para o remapeamento
+    await page.evaluate(() => { window._pad = { buttons: Array.from({ length: 17 }, () => ({ pressed: false })), axes: [0, 0] }; navigator.getGamepads = () => [window._pad, null, null, null]; });
+    await page.click('#keymapWho button[data-w="p0"]'); await sleep(200);
+    await page.click('#keymapList button[data-a="lp"]'); await sleep(200);
+    await page.evaluate(() => { window._pad.buttons[9].pressed = true; }); await sleep(300);
+    await page.evaluate(() => { window._pad.buttons[9].pressed = false; }); await sleep(200);
+    const plbl = await page.evaluate(() => document.querySelector('#keymapList button[data-a="lp"]').textContent);
+    await shot(page, '65-opcoes-remap-gamepad');
+    const psaved = await page.evaluate(() => JSON.parse(SANG.app.settings.padmap1 || '{}'));
+    check('v0.4: remapeamento do gamepad J1 (Soco rápido -> Start) salvo', plbl === 'Start' && psaved.lp && psaved.lp[0] === 9, { plbl, psaved });
+    await page.reload(); await page.waitForFunction(() => window.SANG);
+    await page.evaluate(() => { window._pad = { buttons: Array.from({ length: 17 }, () => ({ pressed: false })), axes: [0, 0] }; navigator.getGamepads = () => [window._pad, null, null, null]; });
+    await page.evaluate(() => SANG.start({ p1: 'varkhan', p2: 'nymera', arena: 'catedral', mode: 'versus' }));
+    await waitFor(page, () => SANG.match.phase === 'fight');
+    await page.evaluate(() => { window._mv = []; const m = SANG.match; const orig = m.emit.bind(m); m.emit = (e) => { if (e.type === 'move') window._mv.push(e.who + ':' + e.id); orig(e); }; });
+    await tap(page, 'Numpad7', 70); await sleep(700);
+    await page.evaluate(() => { window._pad.buttons[9].pressed = true; }); await sleep(120); await page.evaluate(() => { window._pad.buttons[9].pressed = false; }); await sleep(700);
+    const mv = await page.evaluate(() => window._mv);
+    check('v0.4: após recarregar, Num7 dispara o soco do J2 e o Start do gamepad dispara o soco do J1', mv.includes('1:lp') && mv.includes('0:lp'), { mv });
+    await page.evaluate(() => { const m = SANG.match; const [f, o] = m.fighters; o.x = 7.1; f.x = 4.6; o.facing = -1; f.facing = 1; o.inp.refacing(-1); f.inp.refacing(1); });
+    await sleep(600);
+    const hint2 = await page.evaluate(() => document.getElementById('hint2').textContent);
+    await shot(page, '66-hud-dica-j2-remapeada');
+    check('v0.4 bugfix: dica do HUD do J2 usa a tecla remapeada (Num9, não Num6 fixo)', /↑ \+ Num9/.test(hint2), { hint2 });
+    await page.evaluate(() => { for (const p of [0, 1]) { SANG.app.devices.setBindings(null, p); SANG.app.devices.setPad(null, p); } for (const k of ['keymap1', 'keymap2', 'padmap1', 'padmap2']) SANG.app.setOption(k, ''); });
+    report.errors.push(...logs, ...(await st(page)).errors);
+    await page.close();
+  }
   // ---------------------------------------------------------------- 5. 2 jogadores locais no mesmo teclado
   {
     const { page, logs } = await open(browser);
@@ -468,19 +563,19 @@ try {
     await page.close();
   }
   // ---------------------------------------------------------------- 6. CPU x CPU nas duas arenas (estabilidade de render)
-  for (const arena of ['coliseu', 'catedral']) {
+  for (const [arena, p1, p2] of [['coliseu', 'lilith', 'varkhan'], ['catedral', 'lilith', 'varkhan'], ['templo', 'nymera', 'kazuro'], ['forja', 'pestilus', 'brakkor'], ['templo', 'pestilus', 'nymera']]) {
     const { page, logs } = await open(browser);
-    await page.evaluate((arena) => { SANG.start({ p1: 'lilith', p2: 'varkhan', arena, mode: 'cpu', cpu1: true, difficulty: 3 }); SANG.app.timeScale = 3; }, arena);
+    await page.evaluate(([arena, p1, p2]) => { SANG.start({ p1, p2, arena, mode: 'cpu', cpu1: true, difficulty: 3 }); SANG.app.timeScale = 3; }, [arena, p1, p2]);
     let shotDone = false;
     const t0 = Date.now();
     while (Date.now() - t0 < 240000) {
       const s = await st(page);
-      if (!shotDone && s.match.phase === 'fight' && s.match.fighters.some((f) => f.hp < 600)) { await page.evaluate(() => { SANG.app.timeScale = 1; }); await sleep(400); await shot(page, `14-cpu-vs-cpu-${arena}`); shotDone = true; await page.evaluate(() => { SANG.app.timeScale = 3; }); }
+      if (!shotDone && s.match.phase === 'fight' && s.match.fighters.some((f) => f.hp < 600)) { await page.evaluate(() => { SANG.app.timeScale = 1; }); await sleep(400); await shot(page, `14-cpu-vs-cpu-${arena}-${p1}-${p2}`); shotDone = true; await page.evaluate(() => { SANG.app.timeScale = 3; }); }
       if (s.app === 'results') break;
       await sleep(500);
     }
     const s = await st(page);
-    check(`CPU x CPU completa em ${arena}`, s.app === 'results', { result: s.match.result, frames: s.match.frame });
+    check(`CPU x CPU completa em ${arena} (${p1} x ${p2})`, s.app === 'results', { result: s.match.result, frames: s.match.frame });
     report.errors.push(...logs, ...s.errors);
     await page.close();
   }

@@ -1,15 +1,33 @@
-# SANGUINARIUM — Pacto de Sangue (v0.3.0)
+# SANGUINARIUM — Pacto de Sangue (v0.4.0)
 
 Jogo de luta 2.5D de fantasia sombria (18+) feito com **Three.js** (incluído em `vendor/`, funciona offline).
-Conteúdo: **Varkhan, o Carrasco**, **Lilith, a Bruxa Carmesim**, **Kazuro, o Samurai Amaldiçoado** e **Brakkor, o Devorador**; arenas **Coliseu Carmesim** e **Catedral Profana**,
-cada uma com elementos interativos e uma transição para um segundo cenário (**Fosso do Coliseu** / **Cripta Profana**);
-Modo Arcade (escada de 4 lutas com final por personagem), 1 jogador vs CPU (5 dificuldades), 2 jogadores locais,
-treinamento, controles de toque e gamepad, remapeamento de teclas, sangue com poças persistentes, ferimentos
-progressivos, **16 Sentenças de Sangue** (4 por personagem) e **2 supergolpes por personagem**.
+Conteúdo: **Varkhan, o Carrasco**, **Lilith, a Bruxa Carmesim**, **Kazuro, o Samurai Amaldiçoado**, **Brakkor, o Devorador**,
+**Nymera, a Rainha Glacial** e **Pestilus, o Médico da Peste**; arenas **Coliseu Carmesim**, **Catedral Profana**,
+**Templo dos Samurais Mortos** e **Forja Infernal**, cada uma com elementos interativos e uma transição para um segundo
+cenário (**Fosso do Coliseu** / **Cripta Profana** / **Cemitério dos Ronins** / **Coração da Forja**);
+Modo Arcade (escada de 6 lutas com final por personagem), 1 jogador vs CPU (5 dificuldades), 2 jogadores locais,
+treinamento, controles de toque e gamepad, remapeamento de teclado (J1 e J2) e de gamepad, sangue com poças
+persistentes, ferimentos progressivos, **24 Sentenças de Sangue** (4 por personagem) e **2 supergolpes por personagem**.
 
 **Jogue no navegador:** https://luispauloalves500.github.io/sanguinarium/
 
 > Os lutadores continuam sendo **placeholders** montados com primitivas 3D (ver `CHECKPOINTS.md`).
+
+## Novidades da v0.4.0
+- **Nymera, a Rainha Glacial** — assassina de controle: lança de gelo (EX congela), espinhos no alvo, **armadilha de
+  gelo** no chão (imbloqueável, congela), clone congelado (contra-ataque), deslize baixo, garra antiaérea, nevasca e
+  passo glacial (teletransporte). Congelamentos prendem o oponente num **bloco de gelo**.
+- **Pestilus, o Médico da Peste** — alquimista de área: **bomba tóxica em arco que vira nuvem**, **nuvem corrosiva**
+  persistente, **veneno** (dano por tempo, para em 1 PV) na seringa, bisturi e frascos, enxame de ratos (baixo), corvos
+  por cima, explosão miasmática.
+- Cada um com 8 especiais + EX, 2 supergolpes, transformação, 4 Sentenças com câmera cinematográfica, IA, final de
+  Arcade, lista de golpes e seleção.
+- **Arenas do GDD:** Templo dos Samurais Mortos (Espírito Ancestral, Estátua do Guardião destrutível, transição para o
+  Cemitério dos Ronins) e Forja Infernal (Corrente da Forja, Boca da Fornalha, transição para o Coração da Forja).
+- **Remapeamento do Jogador 2 e do gamepad** (Opções → Controles: Teclado J1/J2, Gamepad J1/J2).
+- **Correções:** dica do HUD do J2 com a tecla real; cabeça do Brakkor no quadro em cinemáticas; estátua da Catedral
+  não atravessa mais quem a derrubou.
+- **Balanceamento** com 6 lutadores: todos entre 45% e 55% (CPU×CPU, dif. 2–4). Arcade com 6 lutas.
 
 ## Novidades da v0.3.0
 - **Kazuro, o Samurai Amaldiçoado** — espadachim veloz: cortes espectrais (projétil), investida com invencibilidade,
@@ -46,7 +64,7 @@ npx serve .
 
 No celular, use o link do GitHub Pages acima ou o endereço da rede local (`http://IP-do-PC:8080`), em paisagem.
 
-## Controles (padrão; o Jogador 1 pode remapear em Opções)
+## Controles (padrão; J1, J2 e gamepads podem ser remapeados em Opções)
 
 | Ação | Jogador 1 | Jogador 2 | Toque |
 |---|---|---|---|
@@ -75,6 +93,8 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
 | Lilith | Eclipse Sangrento | **Sabá Sangrento** (golpe **baixo**: defenda agachado; pentagrama e lanças) |
 | Kazuro | Tempestade de Lâminas | Despertar do Oni (a entidade gigante corta três vezes) |
 | Brakkor | Apocalipse Ígneo (meteoros e pilar de fogo) | **Banquete do Devorador** (agarrão imbloqueável de curto alcance; cura 80) |
+| Nymera | **Inverno Eterno** (nevasca e lanças; prende no gelo) | **Túmulo de Gelo** (sarcófago de estacas que implode) |
+| Pestilus | **Pandemia** (nuvem pestilenta) | **Praga Negra** (revoada de corvos) |
 
 ### Especiais dos novos lutadores
 | Comando | Kazuro | Brakkor |
@@ -87,6 +107,17 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
 | `←→` + Chute | Duplicata Sombria | Salto Esmagador (por cima) |
 | `↓↓` + Soco (ESP + ↓) | Lâmina Ascendente (antiaéreo) | Terremoto (baixo) |
 | `↓↓` + Chute | Passo das Sombras (teletransporte) | Devorar (agarrão que cura 60) |
+
+| Comando | Nymera | Pestilus |
+|---|---|---|
+| `↓→` + Soco (ESP) | Lança de Gelo (EX congela) | Bomba Tóxica (arco → nuvem) |
+| `↓→` + Chute (ESP + →) | Deslize Glacial (baixo) | Bisturi Corrompido (envenena) |
+| `↓←` + Soco | Espinhos Glaciais (no alvo) | Nuvem Corrosiva (persistente) |
+| `↓←` + Chute (ESP + ↓) | Armadilha de Gelo (imbloqueável) | Enxame de Ratos (baixo, ESP + ↓) |
+| `←→` + Soco (ESP + ←) | Clone Congelado (contra-ataque) | Seringa Venenosa |
+| `←→` + Chute | Garra do Inverno (antiaéreo) | Corvos da Peste (por cima) |
+| `↓↓` + Soco | Nevasca (4 golpes) | Explosão Miasmática (antiaéreo, ESP + ←) |
+| `↓↓` + Chute | Passo Glacial (teletransporte) | Frasco Ácido (2 golpes) |
 
 ### Sentenças de Sangue (após “FINALIZE-O!” no último round)
 | Personagem | Sentença | Comando | Distância | Toque |
@@ -107,24 +138,38 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
 | Brakkor | Fornalha Infernal | `← → ↓ + I` | perto/média | ESP + ↓ |
 | Brakkor | Esmagamento Sísmico | `↓ → → + U` | média | ESP + → |
 | Brakkor | Rasgo Duplo | `→ → ← + J` | colado | ESP + ← |
+| Nymera | Estilhaços Humanos | `↓ → ↓ + K` | perto | ESP |
+| Nymera | Frio Absoluto | `← → → + I` | longe | ESP + ↓ |
+| Nymera | **Coração de Gelo** | `→ → ← + J` | colado | ESP + → |
+| Nymera | **Prisão Cristalina** | `↓ ↓ → + U` | média | ESP + ← |
+| Pestilus | Decomposição | `↓ ← ↓ + K` | perto/média | ESP |
+| Pestilus | Último Experimento | `→ ← → + I` | colado | ESP + ↓ |
+| Pestilus | **Enxame Faminto** | `← ← → + J` | longe | ESP + → |
+| Pestilus | **Dissecação** | `↓ ↓ ← + U` | perto | ESP + ← |
 
 ### Arenas interativas (desligáveis em Opções → “Perigos e transições de arena”)
 - **Corrente do Muro** (Coliseu/Fosso): `↑ + O` de costas para a borda — salta por cima do oponente.
 - **Estátua do Carrasco** (Catedral/Cripta): `↑ + O` de costas para a borda — a estátua tomba sobre o oponente
   (90 de dano, golpe alto: bloqueie em pé; uma por lado por round).
 - **Poço de Lava / Braseiro Profano**: derrubar o oponente perto da borda causa +50 de dano.
+- **Espírito Ancestral** (Templo/Cemitério): `↑ + O` de costas para o altar — um samurai fantasma atravessa a arena
+  (uma vez por lado por round).
+- **Estátua do Guardião** (Templo): derrubar o oponente na borda quebra a estátua sobre ele (dano extra, uma por lado).
+- **Corrente da Forja** (Forja/Coração): `↑ + O` de costas para a borda — balança e chuta o oponente (bloqueável).
+- **Boca da Fornalha**: lava na borda da Forja (+50 em derrubada).
 - **Transição**: golpe pesado que derruba (ex.: rasteira `↓ + I`) colado à borda arremessa o oponente para o
-  **Fosso do Coliseu** ou a **Cripta Profana** (+70 de dano, uma vez por luta). A luta continua no novo cenário.
+  **Fosso do Coliseu**, a **Cripta Profana**, o **Cemitério dos Ronins** ou o **Coração da Forja** (+70 de dano, uma
+  vez por luta). A luta continua no novo cenário.
 
 ### Modo Arcade
-Escolha o lutador e enfrente 4 lutas (os outros 3 lutadores → Reflexo Sombrio, com dificuldade crescente). Derrota
+Escolha o lutador e enfrente 6 lutas (os outros 5 lutadores nas 4 arenas → Reflexo Sombrio, com dificuldade crescente). Derrota
 permite continuar a mesma luta; vencer a última mostra o final do personagem.
 
 ## Desenvolvimento
 
 ```bash
 npm test                 # testes automatizados da simulação (node --test)
-node tools/balance.mjs   # balanceamento CPU×CPU entre os 4 lutadores
+node tools/balance.mjs   # balanceamento CPU×CPU entre os 6 lutadores
 node tools/qa.mjs        # QA no Chromium headless (precisa de servidor em http://127.0.0.1:8090)
 node tools/live.mjs      # verifica o site publicado (GitHub Pages) sem erros de console
 python3 tools/build.py   # gera /workspace/sanguinarium-build.zip
@@ -142,7 +187,9 @@ procedural), `src/input`, `src/ui`, `src/modes` (Arcade).
 
 Veja `docs/screenshots/` e `docs/qa-report.json`.
 
-![Seleção com 4 lutadores](docs/screenshots/30-selecao-4-lutadores.png)
+![Seleção com 6 lutadores](docs/screenshots/30-selecao-6-lutadores.png)
+![Nymera: Estilhaços Humanos](docs/screenshots/48-fatalidade-estilhacos_humanos.png)
+![Pestilus: Último Experimento](docs/screenshots/53-fatalidade-ultimo_experimento.png)
 ![Kazuro: Mil Cortes](docs/screenshots/40-fatalidade-mil_cortes.png)
 ![Brakkor: Fornalha Infernal](docs/screenshots/45-fatalidade-fornalha_infernal.png)
 ![Sentença de Sangue: Correntes do Suplício](docs/screenshots/17-fatalidade-correntes_suplicio.png)

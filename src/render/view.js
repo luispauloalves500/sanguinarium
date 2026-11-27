@@ -497,6 +497,7 @@ export class GameView {
     for (const p of match.projectiles) {
       seen.add(p.id);
       let v = this.proj.get(p.id);
+      if (v && v.fx !== p.fx) { this.scene.remove(v.obj); dispose(v.obj); v = null; }
       if (!v) { v = this.makeProj(p, match); this.proj.set(p.id, v); }
       const o = v.obj;
       o.position.set(p.x, p.y, 0);

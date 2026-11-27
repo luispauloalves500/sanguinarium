@@ -504,7 +504,7 @@ export class Match {
         if (p.y <= 0.12 && p.vy < 0) {
           const t = p.burst && this.fighters[p.owner].ch.projectiles[p.burst];
           if (t) {
-            Object.assign(p, { kind: p.burst, fx: t.fx, y: 0, vx: 0, vy: 0, grav: 0, box: t.box, life: t.life, clash: false, linger: !!t.linger, tick: t.tick || 0, cd: 0,
+            Object.assign(p, { id: (this.projId = (this.projId || 0) + 1), kind: p.burst, fx: t.fx, y: 0, vx: 0, vy: 0, grav: 0, box: t.box, life: t.life, clash: false, linger: !!t.linger, tick: t.tick || 0, cd: 0,
               hit: { ...t.hit, dmg: p.ex ? (t.ex && t.ex.dmg) || t.hit.dmg : t.hit.dmg, poison: p.ex ? (t.ex && t.ex.poison) || t.hit.poison : t.hit.poison } });
             if (p.ex && t.ex && t.ex.wide) p.box = [p.box[0] - t.ex.wide / 2, p.box[1], p.box[2] + t.ex.wide / 2, p.box[3]];
             this.emit({ type: 'burst', who: p.owner, kind: p.kind, x: p.x });
