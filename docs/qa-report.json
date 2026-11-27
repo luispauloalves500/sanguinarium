@@ -1,5 +1,5 @@
 {
-  "started": "2026-11-27T02:04:47.633Z",
+  "started": "2026-11-27T02:55:44.086Z",
   "checks": [
     {
       "name": "título -> menu principal",
@@ -30,32 +30,32 @@
       "fighters": [
         {
           "char": "varkhan",
-          "hp": 248,
+          "hp": 241,
           "wins": 2,
           "meter": 300,
           "state": "idle",
-          "x": -3.5,
-          "combo": 2,
-          "hits": 25
+          "x": 0.53,
+          "combo": 1,
+          "hits": 23
         },
         {
           "char": "lilith",
           "hp": 0,
           "wins": 0,
-          "meter": 300,
+          "meter": 220,
           "state": "dizzy",
-          "x": -4.98,
+          "x": -2.04,
           "combo": 3,
-          "hits": 24
+          "hits": 30
         }
       ]
     },
     {
       "name": "partida real: golpes conectaram e sangue no chão",
       "ok": true,
-      "p1hits": 25,
-      "p2hits": 24,
-      "decals": 604
+      "p1hits": 23,
+      "p2hits": 30,
+      "decals": 700
     },
     {
       "name": "resultado exibido após a partida real",
@@ -184,6 +184,11 @@
       "hp": 910
     },
     {
+      "name": "v0.3 bugfix: estátua colide e tira o oponente de baixo dela (não atravessa)",
+      "ok": true,
+      "x": 3.3478930182382887
+    },
+    {
       "name": "Coliseu: ↑+O na Corrente do Muro salta para trás do oponente",
       "ok": true,
       "x": [
@@ -193,9 +198,9 @@
     },
     {
       "name": "Transição de cenário por teclado: Coliseu -> Fosso do Coliseu",
-      "ok": false,
+      "ok": true,
       "area": 1,
-      "phase": "transition",
+      "phase": "fight",
       "hp": 865
     },
     {
@@ -232,7 +237,15 @@
       ]
     },
     {
-      "name": "Arcade: luta 2 é o Reflexo Sombrio (espelho) na Catedral",
+      "name": "Arcade: luta 2 é contra Kazuro na Catedral (v0.3: 3 rivais + espelho)",
+      "ok": true,
+      "f": [
+        "varkhan",
+        "kazuro"
+      ]
+    },
+    {
+      "name": "Arcade: luta 4 é o Reflexo Sombrio (espelho)",
       "ok": true
     },
     {
@@ -260,6 +273,159 @@
       "mv": "lp"
     },
     {
+      "name": "v0.3 bugfix: lista de golpes e controles mostram a tecla remapeada (F)",
+      "ok": true,
+      "lp": "F",
+      "combo": true,
+      "ctl": true
+    },
+    {
+      "name": "v0.3 bugfix: dica do HUD do elemento da arena usa a tecla remapeada",
+      "ok": true,
+      "hint": "↑ + G · Corrente do Muro"
+    },
+    {
+      "name": "v0.3: seleção com 4 lutadores (Kazuro e Brakkor)",
+      "ok": true,
+      "cards": 4
+    },
+    {
+      "name": "v0.3: lista de golpes com abas dos 4 lutadores",
+      "ok": true,
+      "tabs": [
+        "varkhan",
+        "lilith",
+        "kazuro",
+        "brakkor",
+        "controls"
+      ]
+    },
+    {
+      "name": "v0.3: Kazuro — Corte Espectral por teclado",
+      "ok": true,
+      "mv": [
+        "corte_espectral",
+        "slash"
+      ]
+    },
+    {
+      "name": "v0.3: Brakkor — Esmagamento (agarrão de comando) por teclado vence bloqueio",
+      "ok": true,
+      "th": [
+        "Esmagamento"
+      ]
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: mil_cortes",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "mil_cortes",
+        "fatalityName": "Mil Cortes",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: ultimo_suspiro",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "ultimo_suspiro",
+        "fatalityName": "Último Suspiro",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: corte_fantasma",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "corte_fantasma",
+        "fatalityName": "Corte Fantasma",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: possessao_oni",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "possessao_oni",
+        "fatalityName": "Possessão Oni",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: devorador_almas",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "devorador_almas",
+        "fatalityName": "Devorador de Almas",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: fornalha_infernal",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "fornalha_infernal",
+        "fatalityName": "Fornalha Infernal",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: esmagamento_sismico",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "esmagamento_sismico",
+        "fatalityName": "Esmagamento Sísmico",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: Sentença de Sangue por teclado: rasgo_duplo",
+      "ok": true,
+      "result": {
+        "winner": 0,
+        "fatality": "rasgo_duplo",
+        "fatalityName": "Rasgo Duplo",
+        "rounds": 1
+      }
+    },
+    {
+      "name": "v0.3: supergolpe 1 (U+I) por teclado: tempestade",
+      "ok": true,
+      "got": "tempestade"
+    },
+    {
+      "name": "v0.3: supergolpe 2 (S+U+I) por teclado: despertar",
+      "ok": true,
+      "got": "despertar"
+    },
+    {
+      "name": "v0.3: supergolpe 1 (U+I) por teclado: apocalipse",
+      "ok": true,
+      "got": "apocalipse"
+    },
+    {
+      "name": "v0.3: supergolpe 2 (S+U+I) por teclado: banquete",
+      "ok": true,
+      "got": "banquete"
+    },
+    {
+      "name": "v0.3: CPU x CPU Brakkor x Kazuro completa",
+      "ok": true,
+      "result": {
+        "winner": 1,
+        "fatality": "ultimo_suspiro",
+        "fatalityName": "Último Suspiro",
+        "rounds": 2
+      }
+    },
+    {
       "name": "2P local: P1 (WASD) e P2 (setas) se movem de forma independente",
       "ok": true,
       "x0": [
@@ -267,8 +433,8 @@
         1.7
       ],
       "x1": [
-        -0.8039999999999992,
-        0.8999999999999992
+        -1.4759999999999998,
+        1.4999999999999998
       ]
     },
     {
@@ -279,32 +445,30 @@
         "gong",
         "gong",
         "whoosh",
-        "whoosh",
-        "hit",
-        "hit"
+        "whoosh"
       ]
     },
     {
       "name": "CPU x CPU completa em coliseu",
       "ok": true,
       "result": {
-        "winner": 1,
-        "fatality": "ruptura_infernal",
-        "fatalityName": "Ruptura Infernal",
-        "rounds": 2
+        "winner": 0,
+        "fatality": "ritual_proibido",
+        "fatalityName": "Ritual Proibido",
+        "rounds": 3
       },
-      "frames": 4973
+      "frames": 7064
     },
     {
       "name": "CPU x CPU completa em catedral",
       "ok": true,
       "result": {
-        "winner": 1,
-        "fatality": "correntes_suplicio",
-        "fatalityName": "Correntes do Suplício",
+        "winner": 0,
+        "fatality": "ritual_proibido",
+        "fatalityName": "Ritual Proibido",
         "rounds": 3
       },
-      "frames": 7034
+      "frames": 6506
     },
     {
       "name": "celular: toque no título abre menu",
@@ -331,31 +495,31 @@
   "errors": [],
   "realMatch": {
     "phase": "finish",
-    "pf": 7,
+    "pf": 3,
     "round": 2,
-    "timer": 77,
-    "frame": 3421,
+    "timer": 76,
+    "frame": 4013,
     "result": null,
     "fighters": [
       {
         "char": "varkhan",
-        "hp": 248,
+        "hp": 241,
         "wins": 2,
         "meter": 300,
         "state": "idle",
-        "x": -3.5,
-        "combo": 2,
-        "hits": 25
+        "x": 0.53,
+        "combo": 1,
+        "hits": 23
       },
       {
         "char": "lilith",
         "hp": 0,
         "wins": 0,
-        "meter": 300,
+        "meter": 220,
         "state": "dizzy",
-        "x": -4.98,
+        "x": -2.04,
         "combo": 3,
-        "hits": 24
+        "hits": 30
       }
     ]
   },
@@ -365,7 +529,7 @@
     "fatalityName": "Execução Real",
     "rounds": 2
   },
-  "finished": "2026-11-27T02:21:02.929Z",
+  "finished": "2026-11-27T03:09:15.196Z",
   "consoleErrors": [],
-  "allPassed": false
+  "allPassed": true
 }

@@ -29,8 +29,10 @@ export class CameraRig {
       const sep = Math.abs(a.x - b.x);
       const cx = THREE.MathUtils.clamp((a.x + b.x) / 2, -C.STAGE_HALF + 2.6, C.STAGE_HALF - 2.6);
       const cy = Math.max(a.y, b.y) * 0.35;
-      const z = 5.6 + sep * 0.48 - this.zoom;
-      tp = new THREE.Vector3(cx, 1.75 + cy, z); tl = new THREE.Vector3(cx, 1.12 + cy * 0.8, 0);
+      // v0.3: lutadores altos (Brakkor) afastam e elevam um pouco a câmera para a cabeça caber no quadro
+      const tall = Math.max(0, Math.max((a.ch && a.ch.height) || 1.9, (b.ch && b.ch.height) || 1.9) - 2.0);
+      const z = 5.6 + sep * 0.48 - this.zoom + tall * 2.2;
+      tp = new THREE.Vector3(cx, 1.75 + cy + tall * 0.6, z); tl = new THREE.Vector3(cx, 1.12 + cy * 0.8 + tall * 0.5, 0);
     }
     const k = 1 - Math.exp(-dt * speed);
     this.pos.lerp(tp, k); this.look.lerp(tl, k);

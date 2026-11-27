@@ -81,17 +81,18 @@ body.touch .pause-btn { display: block; }
 .hint { color: #a99; font-size: 13px; margin-top: 18px; text-align: center; }
 .title { font-size: 30px; letter-spacing: 8px; color: #f0e0c0; text-shadow: 0 0 14px var(--red); margin: 6px 0 18px; text-align: center; }
 .select-wrap { display: flex; gap: 22px; width: 100%; max-width: 1240px; justify-content: space-between; }
-.pick { width: 31%; max-width: 330px; background: rgba(10,0,2,.7); border: 2px solid #5a3a1a; padding: 14px; }
+.pick { width: 33%; max-width: 360px; background: rgba(10,0,2,.7); border: 2px solid #5a3a1a; padding: 14px; }
 .pick.ready { border-color: var(--red2); box-shadow: 0 0 20px rgba(255,30,40,.5); }
 .pick h4 { margin: 0 0 8px; letter-spacing: 3px; color: var(--gold); font-size: 14px; }
-.pick .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-@media (max-width: 760px) { .pick .cards { grid-template-columns: repeat(2, 1fr); } }
-.card { min-width: 0; padding: 8px 4px; border: 2px solid #3a2a1a; background: linear-gradient(#200206, #0a0002); cursor: pointer; text-align: center; }
+.pick .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+@media (max-width: 900px) { .pick .cards { grid-template-columns: repeat(2, 1fr); } }
+.card { min-width: 0; padding: 8px 2px; border: 2px solid #3a2a1a; background: linear-gradient(#200206, #0a0002); cursor: pointer; text-align: center; }
 .card.sel { border-color: var(--red2); box-shadow: 0 0 14px rgba(255,40,40,.5) inset; }
 .card .emb { font-size: 34px; color: var(--gold); }
 .card .nm { font-weight: bold; letter-spacing: 2px; }
 .card .tt { font-size: 11px; color: #c99; line-height: 1.2; }
-.card .nm { font-size: 13px; }
+.card .nm { font-size: 10px; letter-spacing: 0; overflow-wrap: anywhere; }
+.card .emb { line-height: 1.1; }
 #scr-moves .tabs { flex-wrap: wrap; }
 .pick .bio { font-size: 13px; color: #cbb; min-height: 52px; margin: 10px 0; }
 .pick .ok { width: 100%; padding: 10px; background: #5a0008; color: #fff; border: 1px solid var(--gold); font: 16px Georgia, serif; letter-spacing: 2px; cursor: pointer; }

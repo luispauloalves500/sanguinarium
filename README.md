@@ -1,15 +1,26 @@
-# SANGUINARIUM — Pacto de Sangue (v0.2.0)
+# SANGUINARIUM — Pacto de Sangue (v0.3.0)
 
 Jogo de luta 2.5D de fantasia sombria (18+) feito com **Three.js** (incluído em `vendor/`, funciona offline).
-Conteúdo: **Varkhan, o Carrasco** e **Lilith, a Bruxa Carmesim**; arenas **Coliseu Carmesim** e **Catedral Profana**,
+Conteúdo: **Varkhan, o Carrasco**, **Lilith, a Bruxa Carmesim**, **Kazuro, o Samurai Amaldiçoado** e **Brakkor, o Devorador**; arenas **Coliseu Carmesim** e **Catedral Profana**,
 cada uma com elementos interativos e uma transição para um segundo cenário (**Fosso do Coliseu** / **Cripta Profana**);
-Modo Arcade (escada de 3 lutas com final por personagem), 1 jogador vs CPU (5 dificuldades), 2 jogadores locais,
+Modo Arcade (escada de 4 lutas com final por personagem), 1 jogador vs CPU (5 dificuldades), 2 jogadores locais,
 treinamento, controles de toque e gamepad, remapeamento de teclas, sangue com poças persistentes, ferimentos
-progressivos, **8 Sentenças de Sangue** (4 por personagem) e **2 supergolpes por personagem**.
+progressivos, **16 Sentenças de Sangue** (4 por personagem) e **2 supergolpes por personagem**.
 
 **Jogue no navegador:** https://luispauloalves500.github.io/sanguinarium/
 
 > Os lutadores continuam sendo **placeholders** montados com primitivas 3D (ver `CHECKPOINTS.md`).
+
+## Novidades da v0.3.0
+- **Kazuro, o Samurai Amaldiçoado** — espadachim veloz: cortes espectrais (projétil), investida com invencibilidade,
+  iaijutsu, contra-ataque (Lâmina Reflexa), dança de 5 cortes, duplicata sombria, antiaéreo e teletransporte.
+- **Brakkor, o Devorador** — demônio gigante: agarrões de comando (Esmagamento; Devorar cura), investida e punho com
+  **superarmadura**, bola de fogo, sopro infernal, salto esmagador (por cima) e **terremoto** (baixo; pule).
+- Cada um com 8 especiais (+ potencializados), 2 supergolpes, transformação, 4 Sentenças de Sangue com câmera
+  cinematográfica, IA própria, final de Arcade e entrada na lista de golpes/seleção.
+- **Correções da v0.2:** a Estátua do Carrasco colide e tira o oponente de baixo dela; cambalhota e quedas mais suaves;
+  lista de golpes, controles e dicas mostram as **teclas remapeadas**.
+- Arcade com 4 lutas (3 rivais + Reflexo Sombrio). Balanceamento CPU×CPU entre os 4 (ver `CHECKPOINTS.md`).
 
 ## Novidades da v0.2.0
 - **Correções:** pernas ao ajoelhar/agachar/estocada (IK de duas articulações com pés plantados e planos), lanças do
@@ -62,6 +73,20 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
 |---|---|---|
 | Varkhan | Execução Carmesim | **Tribunal dos Condenados** (médio, alcance longo; carrascos espectrais) |
 | Lilith | Eclipse Sangrento | **Sabá Sangrento** (golpe **baixo**: defenda agachado; pentagrama e lanças) |
+| Kazuro | Tempestade de Lâminas | Despertar do Oni (a entidade gigante corta três vezes) |
+| Brakkor | Apocalipse Ígneo (meteoros e pilar de fogo) | **Banquete do Devorador** (agarrão imbloqueável de curto alcance; cura 80) |
+
+### Especiais dos novos lutadores
+| Comando | Kazuro | Brakkor |
+|---|---|---|
+| `↓→` + Soco (ESP) | Corte Espectral (projétil) | Bola de Fogo Infernal |
+| `↓→` + Chute (ESP + →) | Investida Relâmpago | Investida do Touro (superarmadura) |
+| `↓←` + Soco | Iaijutsu do Vazio | Esmagamento (agarrão de comando, ESP + ←) |
+| `↓←` + Chute | Lâmina Reflexa (contra-ataque, ESP + ←) | Sopro Infernal (4 golpes) |
+| `←→` + Soco | Dança das Mil Lâminas (5 cortes) | Punho de Magma (superarmadura) |
+| `←→` + Chute | Duplicata Sombria | Salto Esmagador (por cima) |
+| `↓↓` + Soco (ESP + ↓) | Lâmina Ascendente (antiaéreo) | Terremoto (baixo) |
+| `↓↓` + Chute | Passo das Sombras (teletransporte) | Devorar (agarrão que cura 60) |
 
 ### Sentenças de Sangue (após “FINALIZE-O!” no último round)
 | Personagem | Sentença | Comando | Distância | Toque |
@@ -74,6 +99,14 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
 | Lilith | Ritual Proibido | `← ← ↓ + I` | perto | ESP + ↓ |
 | Lilith | **Beijo da Morte** | `→ → ↓ + J` | perto | ESP + → |
 | Lilith | **Chuva de Lanças Final** | `← ↓ ← + U` | longe | ESP + ← |
+| Kazuro | Mil Cortes | `→ ← → + K` | perto | ESP |
+| Kazuro | Último Suspiro | `← ← → + I` | média | ESP + ↓ |
+| Kazuro | Corte Fantasma | `↓ ← ↓ + J` | perto | ESP + → |
+| Kazuro | Possessão Oni | `→ ↓ → + U` | longe | ESP + ← |
+| Brakkor | Devorador de Almas | `↓ ↓ → + K` | colado/perto | ESP |
+| Brakkor | Fornalha Infernal | `← → ↓ + I` | perto/média | ESP + ↓ |
+| Brakkor | Esmagamento Sísmico | `↓ → → + U` | média | ESP + → |
+| Brakkor | Rasgo Duplo | `→ → ← + J` | colado | ESP + ← |
 
 ### Arenas interativas (desligáveis em Opções → “Perigos e transições de arena”)
 - **Corrente do Muro** (Coliseu/Fosso): `↑ + O` de costas para a borda — salta por cima do oponente.
@@ -84,13 +117,14 @@ Comandos de especiais (relativos ao lado do lutador): `↓→`, `↓←`, `←�
   **Fosso do Coliseu** ou a **Cripta Profana** (+70 de dano, uma vez por luta). A luta continua no novo cenário.
 
 ### Modo Arcade
-Escolha o lutador e enfrente 3 lutas (rival → Reflexo Sombrio → rival final, com dificuldade crescente). Derrota
+Escolha o lutador e enfrente 4 lutas (os outros 3 lutadores → Reflexo Sombrio, com dificuldade crescente). Derrota
 permite continuar a mesma luta; vencer a última mostra o final do personagem.
 
 ## Desenvolvimento
 
 ```bash
 npm test                 # testes automatizados da simulação (node --test)
+node tools/balance.mjs   # balanceamento CPU×CPU entre os 4 lutadores
 node tools/qa.mjs        # QA no Chromium headless (precisa de servidor em http://127.0.0.1:8090)
 node tools/live.mjs      # verifica o site publicado (GitHub Pages) sem erros de console
 python3 tools/build.py   # gera /workspace/sanguinarium-build.zip
@@ -108,5 +142,8 @@ procedural), `src/input`, `src/ui`, `src/modes` (Arcade).
 
 Veja `docs/screenshots/` e `docs/qa-report.json`.
 
+![Seleção com 4 lutadores](docs/screenshots/30-selecao-4-lutadores.png)
+![Kazuro: Mil Cortes](docs/screenshots/40-fatalidade-mil_cortes.png)
+![Brakkor: Fornalha Infernal](docs/screenshots/45-fatalidade-fornalha_infernal.png)
 ![Sentença de Sangue: Correntes do Suplício](docs/screenshots/17-fatalidade-correntes_suplicio.png)
 ![Transição para o Fosso do Coliseu](docs/screenshots/25-arena-transicao-fosso.png)

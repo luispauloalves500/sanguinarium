@@ -389,7 +389,7 @@ try {
     ['kazuro', 'varkhan', 'catedral', 'possessao_oni', 3.2, [6, 2, 6], 'KeyU', 235],
     ['brakkor', 'varkhan', 'coliseu', 'devorador_almas', 1.2, [2, 2, 6], 'KeyK', 120],
     ['brakkor', 'lilith', 'catedral', 'fornalha_infernal', 1.5, [4, 6, 2], 'KeyI', 150],
-    ['brakkor', 'kazuro', 'coliseu', 'esmagamento_sismico', 2.2, [2, 6, 6], 'KeyU', 96],
+    ['brakkor', 'kazuro', 'coliseu', 'esmagamento_sismico', 2.2, [2, 6, 6], 'KeyU', 150],
     ['brakkor', 'varkhan', 'catedral', 'rasgo_duplo', 1.0, [6, 6, 4], 'KeyJ', 150],
   ];
   let idx3 = 40;
