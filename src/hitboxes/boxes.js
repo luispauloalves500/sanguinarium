@@ -17,14 +17,14 @@ export function hurtboxes(f) {
     case 'knockdown': case 'getup': case 'dead': case 'cinematic': case 'thrown': case 'hidden': return [];
   }
   if (f.hidden) return [];
-  const h = f.ch.height;
+  const h = f.ch.height, w = f.ch.width || 1; // largura relativa (Brakkor é mais largo: alvo maior)
   const out = [];
   if (f.state === 'juggle' || f.airborne) {
-    out.push([f.x - 0.38, f.y + 0.1, f.x + 0.38, f.y + 1.45]);
+    out.push([f.x - 0.38 * w, f.y + 0.1, f.x + 0.38 * w, f.y + 1.45 * Math.max(1, w * 0.9)]);
   } else if (f.crouching) {
-    out.push(worldBox(f, CROUCH));
+    out.push(worldBox(f, [CROUCH[0] * w, 0, CROUCH[2] * w, CROUCH[3] * Math.max(1, w * 0.95)]));
   } else {
-    out.push(worldBox(f, [STAND[0], 0, STAND[2], h - 0.05]));
+    out.push(worldBox(f, [STAND[0] * w, 0, STAND[2] * w, h - 0.05]));
   }
   // membro estendido durante golpe (permite punir golpes que erram)
   if (f.move && f.move.hits.length) {
@@ -38,6 +38,6 @@ export function hurtboxes(f) {
   return out;
 }
 export function pushbox(f) {
-  const w = f.state === 'juggle' ? 0.25 : 0.32;
+  const w = (f.state === 'juggle' ? 0.25 : 0.32) * (f.ch.width || 1);
   return [f.x - w, f.y, f.x + w, f.y + (f.crouching ? 1.1 : f.ch.height - 0.2)];
 }

@@ -258,7 +258,7 @@ export class Match {
   startMove(f, id) {
     const m = getMove(f.charId, id);
     this.consume(f);
-    f.move = m; f.mf = 0; f.hitsDone = 0; f.connected = false; f.ex = false; f.healAcc = 0;
+    f.move = m; f.mf = 0; f.hitsDone = 0; f.connected = false; f.ex = false; f.healAcc = 0; f.armorUsed = false;
     if (!m.air) { f.state = 'attack'; f.vx = 0; f.crouching = !!m.crouch; }
     f.blocking = false;
     this.emit({ type: 'move', who: f.idx, id, kind: m.kind });
@@ -284,7 +284,19 @@ export class Match {
       if (Math.abs(f.x - o.x) < 0.5) f.x = clamp(o.x - side * 1.0, -C.STAGE_HALF, C.STAGE_HALF);
       f.facing = o.x > f.x ? 1 : -1; f.inp.refacing(f.facing);
       this.emit({ type: 'teleport', who: f.idx, x: f.x });
-      if (f.ex) { const ex = true; this.startMove(f, 'teleporte_ex'); f.ex = ex; return; }
+      if (f.ex) { const ex = true; this.startMove(f, m.exMove || 'teleporte_ex'); f.ex = ex; return; }
+    }
+    // agarrão de comando (Brakkor): imbloqueável, só pega oponente no chão e ao alcance
+    if (m.cmdGrab && f.mf >= m.cmdGrab.f0 && f.mf <= m.cmdGrab.f1 && !f.connected) {
+      const g = m.cmdGrab;
+      const ok = Math.abs(f.x - o.x) <= g.range && !o.airborne && o.invuln === 0 && !o.hidden &&
+        !['knockdown', 'getup', 'dead', 'cinematic', 'thrown', 'juggle', 'vault'].includes(o.state) && Math.sign(o.x - f.x) === f.facing;
+      if (ok) {
+        f.connected = true;
+        const ex = f.ex;
+        this.startThrow(f, o, { dmg: Math.round(g.dmg * (ex ? 1.35 : 1)), heal: g.heal ? Math.round(g.heal * (ex ? 1.5 : 1)) : 0, name: m.name, noTech: true, slam: g.slam });
+        return;
+      }
     }
     if (m.script === 'heal' && f.mf >= m.heal.f0 && f.mf <= m.heal.f1) {
       const total = f.ex ? m.heal.exTotal : m.heal.total;
@@ -335,7 +347,7 @@ export class Match {
     };
     this.projectiles.push(p);
     this.emit({ type: 'proj', who: f.idx, kind: s.proj, x: p.x, y: p.y, ex: f.ex });
-    if (f.ex && s.proj === 'rain') {
+    if (f.ex && t.exSpread) {
       for (const dx of [-1.1, 1.1]) this.projectiles.push({ ...p, id: ++this.projId, x: clamp(x + dx, -C.STAGE_HALF, C.STAGE_HALF), delay: p.delay + 6 });
     }
   }
@@ -345,25 +357,28 @@ export class Match {
       ['idle', 'walk', 'crouch', 'land', 'attack', 'blockstun'].includes(o.state) && o.state !== 'blockstun';
   }
 
-  startThrow(f, o) {
+  startThrow(f, o, data = null) {
     this.consume(f);
+    f.throwData = data;
     f.state = 'throw'; f.sf = 0; f.move = null; f.vx = 0; o.state = 'thrown'; o.sf = 0; o.move = null; o.vx = 0;
     o.crouching = false; o.blocking = false;
-    this.emit({ type: 'throw', who: f.idx, name: f.ch.throwName });
+    this.emit({ type: 'throw', who: f.idx, name: data ? data.name : f.ch.throwName, cmd: !!data });
   }
 
   updateThrow(f, o) {
     if (o.state !== 'thrown') { this.toNeutral(f); return; }
     o.x = f.x + f.facing * 0.72; o.y = 0;
-    if (f.sf <= C.THROW_TECH && o.inp.pressedWithin('grab', 3)) {
+    const td = f.throwData;
+    if (f.sf <= C.THROW_TECH && !(td && td.noTech) && o.inp.pressedWithin('grab', 3)) {
       this.emit({ type: 'tech', who: o.idx, x: (f.x + o.x) / 2 });
       for (const [g, dir] of [[f, -f.facing], [o, f.facing]]) { g.state = 'blockstun'; g.blockstun = 16; g.pushV = dir * 0.12; g.sf = 0; }
       return;
     }
     if (f.sf === 32) {
-      const dmg = Math.round(f.ch.throwDmg * (f.furyActive ? 1.2 : 1));
+      const dmg = Math.round((td ? td.dmg : f.ch.throwDmg) * (f.furyActive ? 1.2 : 1));
       o.hp = Math.max(0, o.hp - dmg);
-      if (f.ch.throwHeal) f.hp = Math.min(C.MAX_HP, f.hp + f.ch.throwHeal);
+      const heal = td ? td.heal : f.ch.throwHeal;
+      if (heal) { f.hp = Math.min(C.MAX_HP, f.hp + heal); this.emit({ type: 'heal', who: f.idx, amount: heal }); }
       f.meter = Math.min(C.METER_MAX, f.meter + 30); o.fury = Math.min(C.FURY_MAX, o.fury + 8);
       f.stats.dmg += dmg; f.stats.hits++;
       this.emit({ type: 'hit', att: f.idx, def: o.idx, x: o.x, y: 1.2, dmg, heavy: true, throw: true, combo: 1 });
@@ -373,8 +388,9 @@ export class Match {
       o.x = clamp(f.x + f.facing * 1.4, -C.STAGE_HALF, C.STAGE_HALF);
       o.state = 'knockdown'; o.kdTimer = C.KNOCKDOWN_FRAMES; o.sf = 0;
       this.emit({ type: 'land', who: o.idx, x: o.x, heavy: true });
+      if (td && td.slam) this.emit({ type: 'quake', who: f.idx, x: o.x });
     }
-    if (f.sf >= 50) this.toNeutral(f);
+    if (f.sf >= 50) { f.throwData = null; this.toNeutral(f); }
   }
 
   tryBreaker(f, o) {
@@ -524,9 +540,10 @@ export class Match {
       const ex = def.ex;
       def.x = clamp(att.x - att.facing * 0.95, -C.STAGE_HALF, C.STAGE_HALF);
       def.facing = att.x > def.x ? 1 : -1; def.inp.refacing(def.facing);
-      this.startMove(def, 'veu_contra'); def.ex = ex; def.invuln = 6;
+      const cm = def.move.counterMove || 'veu_contra', cname = def.move.name;
+      this.startMove(def, cm); def.ex = ex; def.invuln = 6;
       if (att.move && !proj) { att.state = 'hitstun'; att.hitstun = 18; att.move = null; }
-      this.emit({ type: 'counterStance', who: def.idx, x: def.x });
+      this.emit({ type: 'counterStance', who: def.idx, x: def.x, name: cname });
       this.hitstop = 6;
       return;
     }
@@ -539,6 +556,18 @@ export class Match {
       return;
     }
     if (def.juggleProt && (def.airborne || def.state === 'juggle')) return;
+    // superarmadura (Brakkor): absorve 1 golpe durante a janela, sofrendo o dano sem atordoamento
+    if (def.move && def.move.armor && def.mf >= def.move.armor[0] && def.mf <= def.move.armor[1] && !def.armorUsed &&
+      h.effect !== 'cinematic' && h.level !== 'unblockable' && h.level !== 'throw' && !this.canBlock(def, h.level)) {
+      def.armorUsed = true;
+      const ad = Math.max(1, Math.round(h.dmg * 0.8));
+      def.hp = Math.max(this.opts.training ? 1 : 0, def.hp - ad);
+      att.stats.dmg += ad; att.stats.hits++;
+      def.meter = Math.min(C.METER_MAX, def.meter + 6);
+      this.hitstop = 7;
+      this.emit({ type: 'armor', att: att.idx, def: def.idx, x: ix, y: iy, dmg: ad });
+      return;
+    }
     const kindChip = move.kind === 'special' || move.kind === 'super';
     if (this.canBlock(def, h.level)) {
       const perfect = this.frame - def.lastBlockEdge <= C.PERFECT_BLOCK_WINDOW + this.hitstop;
@@ -623,6 +652,7 @@ export class Match {
       const dmg = Math.round(h.dmg * (c.fury ? 1.2 : 1));
       def.hp = Math.max(this.opts.training ? 1 : 0, def.hp - dmg);
       def.comboHits++; att.stats.dmg += dmg; att.stats.hits++;
+      if (h.heal) { att.hp = Math.min(C.MAX_HP, att.hp + h.heal); this.emit({ type: 'heal', who: c.att, amount: h.heal, frame: 0 }); }
       this.emit({ type: 'hit', att: c.att, def: c.def, x: def.x, y: 1.2, dmg, heavy: true, slash: true, cinematic: true, combo: def.comboHits, hpAfter: def.hp });
     }
     if (c.f >= c.dur) {

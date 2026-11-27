@@ -84,12 +84,15 @@ body.touch .pause-btn { display: block; }
 .pick { width: 31%; max-width: 330px; background: rgba(10,0,2,.7); border: 2px solid #5a3a1a; padding: 14px; }
 .pick.ready { border-color: var(--red2); box-shadow: 0 0 20px rgba(255,30,40,.5); }
 .pick h4 { margin: 0 0 8px; letter-spacing: 3px; color: var(--gold); font-size: 14px; }
-.pick .cards { display: flex; gap: 10px; }
-.card { flex: 1; padding: 10px; border: 2px solid #3a2a1a; background: linear-gradient(#200206, #0a0002); cursor: pointer; text-align: center; }
+.pick .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+@media (max-width: 760px) { .pick .cards { grid-template-columns: repeat(2, 1fr); } }
+.card { min-width: 0; padding: 8px 4px; border: 2px solid #3a2a1a; background: linear-gradient(#200206, #0a0002); cursor: pointer; text-align: center; }
 .card.sel { border-color: var(--red2); box-shadow: 0 0 14px rgba(255,40,40,.5) inset; }
 .card .emb { font-size: 34px; color: var(--gold); }
 .card .nm { font-weight: bold; letter-spacing: 2px; }
-.card .tt { font-size: 12px; color: #c99; }
+.card .tt { font-size: 11px; color: #c99; line-height: 1.2; }
+.card .nm { font-size: 13px; }
+#scr-moves .tabs { flex-wrap: wrap; }
 .pick .bio { font-size: 13px; color: #cbb; min-height: 52px; margin: 10px 0; }
 .pick .ok { width: 100%; padding: 10px; background: #5a0008; color: #fff; border: 1px solid var(--gold); font: 16px Georgia, serif; letter-spacing: 2px; cursor: pointer; }
 .row { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; justify-content: center; }

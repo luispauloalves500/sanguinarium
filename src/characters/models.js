@@ -32,6 +32,10 @@ const PALETTES = {
   varkhanAlt: { skin: 0x8a7f6c, leather: 0x1b1b22, iron: 0x7a6a3a, hood: 0xd8d0c0, cloth: 0x10202a, eye: 0x30c0ff, blade: 0xa8a090, wood: 0x2a1a10 },
   lilith: { skin: 0xe8d6cf, robe: 0x7a0c18, robeDark: 0x2b0509, hair: 0x0c0809, gold: 0xb08a3a, eye: 0xff1030, magic: 0xff1838, boot: 0x1a0a0c },
   lilithAlt: { skin: 0xd8c9e0, robe: 0x3a1460, robeDark: 0x150828, hair: 0xd9d4e8, gold: 0x9aa0b0, eye: 0xb040ff, magic: 0xb030ff, boot: 0x120818 },
+  kazuro: { skin: 0xc8b8a0, cloth: 0x1a1a22, hakama: 0x22222c, plate: 0x2a0a0a, lace: 0x8a1a1a, mask: 0x3a0808, eye: 0x60a0ff, spirit: 0x5080ff, blade: 0xb8c0c8 },
+  kazuroAlt: { skin: 0xb0a898, cloth: 0xd8d0c0, hakama: 0x303848, plate: 0x101418, lace: 0x2a4a8a, mask: 0xd8d8d0, eye: 0xff3030, spirit: 0xff4040, blade: 0x909aa0 },
+  brakkor: { skin: 0x7a1e12, dark: 0x3a0c08, horn: 0x2a2018, lava: 0xff5a10, eye: 0xffb020, cloth: 0x2a1a12 },
+  brakkorAlt: { skin: 0x2a3036, dark: 0x14181c, horn: 0xc8bca0, lava: 0x40c0ff, eye: 0x80e0ff, cloth: 0x1a1418 },
 };
 
 export function buildFighter(charId, alt = false) {
@@ -41,8 +45,8 @@ export function buildFighter(charId, alt = false) {
   const rig = { root, body, pelvis };
   const dmg = { 1: [], 2: [], 3: [], remove2: [], skinMats: [] };
   let mats;
-  if (charId === 'varkhan') mats = buildVarkhan(rig, dmg, PALETTES[alt ? 'varkhanAlt' : 'varkhan']);
-  else mats = buildLilith(rig, dmg, PALETTES[alt ? 'lilithAlt' : 'lilith']);
+  const B = { varkhan: buildVarkhan, lilith: buildLilith, kazuro: buildKazuro, brakkor: buildBrakkor };
+  mats = (B[charId] || buildVarkhan)(rig, dmg, PALETTES[charId + (alt ? 'Alt' : '')] || PALETTES.varkhan);
   for (const k of [1, 2, 3]) for (const m of dmg[k]) m.visible = false;
   const baseSkin = dmg.skinMats.map((m) => m.color.clone());
   const fighter = {
@@ -355,6 +359,210 @@ function legIK(L1, L2, z, h) {
   const kneeIn = Math.acos(Math.max(-1, Math.min(1, (L1 * L1 + L2 * L2 - D * D) / (2 * L1 * L2))));
   return { lx: -(phi + a), k: Math.PI - kneeIn };
 }
+// ---------------- KAZURO (v0.3) — PLACEHOLDER procedural: samurai amaldiçoado com máscara oni e katana espectral
+function buildKazuro(rig, dmg, c) {
+  const skin = std(c.skin, { roughness: 0.7 });
+  const cloth = std(c.cloth, { roughness: 0.9, side: THREE.DoubleSide });
+  const hakama = std(c.hakama, { roughness: 0.92, side: THREE.DoubleSide });
+  const plate = std(c.plate, { metalness: 0.35, roughness: 0.45 });
+  const lace = std(c.lace, { roughness: 0.8 });
+  const mask = std(c.mask, { metalness: 0.4, roughness: 0.35 });
+  const hair = std(0x0a0a0c, { roughness: 0.7, side: THREE.DoubleSide });
+  const eye = std(0x000000, { emissive: c.eye, emissiveIntensity: 2.6 });
+  const spirit = std(0x050818, { emissive: c.spirit, emissiveIntensity: 1.4 });
+  const blade = std(c.blade, { metalness: 0.95, roughness: 0.18, emissive: 0x000000 });
+  const gold = std(0x9a7a3a, { metalness: 0.8, roughness: 0.35 });
+  const rope = std(0xc8b890, { roughness: 0.95 });
+  const blood = std(0x5a0000, { roughness: 0.35, emissive: 0x200000 });
+  const bruise = std(0x2a1838, { roughness: 0.9 });
+  const d = { hip: 0.98, thigh: 0.48, shin: 0.48, foot: 0.06, torso: 0.58, shoulder: 0.27, uarm: 0.31, farm: 0.29, armR: 0.075, legR: 0.095, hipW: 0.12 };
+  skeleton(rig, d, { upperArm: cloth, foreArm: skin, hand: skin, thigh: hakama, shin: hakama, foot: std(0x2a2018) });
+  dmg.skinMats.push(skin);
+  const { pelvis, spine, chest, head, neck, shA, shB, handA, handB, elA, elB, hipA, hipB, knA, knB, ankleA, ankleB } = rig;
+  // tronco: quimono escuro + couraça (dō) laqueada em placas amarradas
+  mk(spine, G.cyl(0.26, 0.21, d.torso, 12), cloth, [0, d.torso * 0.5, 0], [0, 0, 0], [1, 1, 0.72]);
+  const dou = new THREE.Group(); spine.add(dou);
+  for (let i = 0; i < 4; i++) mk(dou, G.cyl(0.27 - i * 0.008, 0.25 - i * 0.008, 0.1, 12, 1, true), plate, [0, 0.12 + i * 0.105, 0], [0, 0, 0], [1, 1, 0.76]);
+  for (let i = 0; i < 4; i++) mk(dou, G.cyl(0.272 - i * 0.008, 0.272 - i * 0.008, 0.012, 12, 1, true), lace, [0, 0.07 + i * 0.105, 0], [0, 0, 0], [1, 1, 0.76]);
+  mk(dou, G.box(0.04, 0.38, 0.02), lace, [0, 0.27, 0.2]);
+  dmg.remove2.push(dou);
+  // obi (faixa) com nó e corda sagrada (shimenawa) rompida
+  mk(spine, G.cyl(0.24, 0.24, 0.1, 12), lace, [0, 0.03, 0], [0, 0, 0], [1, 1, 0.78]);
+  mk(spine, G.box(0.1, 0.08, 0.06), lace, [-0.12, 0.02, 0.18]);
+  for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; mk(spine, G.tor(0.03, 0.012), rope, [Math.cos(a) * 0.255, 0.1, Math.sin(a) * 0.19], [0, a, Math.PI / 2]); }
+  for (const x of [-0.1, 0.06]) swinger(rig, strip(spine, [x, 0.06, 0.2], 0.05, 0.22, std(0xe8e0d0, { side: THREE.DoubleSide }), [-0.1, 0, 0], 0.005), { amp: 0.08, drag: 0.8, k: 40 });
+  // hakama: painéis largos que acompanham as coxas
+  rig.skirtPanels = [];
+  for (const [hip, x] of [[hipA, d.hipW], [hipB, -d.hipW]]) {
+    const pv = new THREE.Group(); pv.position.set(x, 0, 0); pelvis.add(pv);
+    mk(pv, G.cyl(0.13, 0.22, 0.86, 10, 1, true), hakama, [0, -0.43, 0]);
+    rig.skirtPanels.push({ pv, hip });
+  }
+  // haori rasgado nas costas
+  rig.cape = [];
+  [[-0.17, 0.78, 0.13], [-0.05, 0.9, 0.12], [0.07, 0.84, 0.12], [0.18, 0.72, 0.12]].forEach(([x, len, w]) => {
+    const s = strip(chest, [x, d.torso * 0.35, -0.18], w, len, cloth, [0.08, 0, x * 0.3], 0.01);
+    rig.cape.push(swinger(rig, s, { amp: 0.06, drag: -1.1, k: 32, damp: 5 }));
+  });
+  // ombreiras (sode) penduradas
+  for (const [sh, s] of [[shA, 1], [shB, -1]]) {
+    const pv = new THREE.Group(); pv.position.set(s * 0.05, 0.05, 0); sh.add(pv);
+    for (let i = 0; i < 3; i++) mk(pv, G.box(0.2, 0.075, 0.2), plate, [s * 0.03, -0.04 - i * 0.075, 0], [0, 0, s * 0.18]);
+    for (let i = 0; i < 3; i++) mk(pv, G.box(0.205, 0.012, 0.205), lace, [s * 0.03, -0.08 - i * 0.075, 0], [0, 0, s * 0.18]);
+    swinger(rig, pv, { axis: 'z', amp: 0.03, drag: 0.3, k: 50 });
+  }
+  dmg.remove2.push(shA.children[shA.children.length - 1]);
+  // manoplas (kote) e caneleiras (suneate)
+  for (const e of [elA, elB]) { mk(e, G.cyl(0.08, 0.07, 0.2, 9), plate, [0, -0.15, 0]); mk(e, G.cyl(0.082, 0.082, 0.012, 9), lace, [0, -0.06, 0]); }
+  for (const kn of [knA, knB]) { mk(kn, G.box(0.13, 0.3, 0.06), plate, [0, -0.25, 0.08]); mk(kn, G.sph(0.06, 8, 6), plate, [0, 0, 0.08]); }
+  for (const an of [ankleA, ankleB]) mk(an, G.box(0.13, 0.03, 0.26), std(0x8a7050), [0, -0.075, 0.06]); // waraji
+  // cabeça: coque samurai, máscara oni (menpo) rachada com chifres e olhos espectrais
+  mk(neck, G.cyl(0.055, 0.065, 0.14, 8), skin, [0, 0.04, 0]);
+  mk(head, G.sph(0.13, 14, 10), skin, [0, 0.03, 0], [0, 0, 0], [0.95, 1.1, 1]);
+  mk(head, G.sph(0.135, 12, 8), hair, [0, 0.08, -0.03], [0, 0, 0], [1, 0.9, 1.05]);
+  mk(head, G.cyl(0.035, 0.03, 0.14, 8), hair, [0, 0.2, -0.04], [-0.9, 0, 0]);
+  mk(head, G.tor(0.035, 0.01), std(0xa01010), [0, 0.2, -0.07], [0.6, 0, 0]);
+  const hl = strip(head, [0, 0.16, -0.12], 0.05, 0.36, hair, [0.25, 0, 0], 0.03);
+  swinger(rig, hl, { amp: 0.06, drag: -0.9, k: 35, damp: 5 });
+  rig.hair = [swinger(rig, strip(head, [0.08, 0.1, 0.08], 0.03, 0.22, hair, [0, 0, 0.15], 0.015), { amp: 0.05, k: 40 })];
+  rig.hairMesh = hl;
+  const menpo = new THREE.Group(); head.add(menpo); menpo.position.set(0, 0, 0.1);
+  mk(menpo, G.sph(0.12, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6), mask, [0, 0.0, 0], [Math.PI / 2 + 0.2, 0, 0], [1, 0.45, 1.05]);
+  mk(menpo, G.box(0.2, 0.06, 0.06), mask, [0, -0.06, 0.02]);
+  for (let i = 0; i < 6; i++) mk(menpo, G.cone(0.01, 0.04, 4), std(0xe8e0c8), [-0.06 + i * 0.024, -0.07, 0.055], [Math.PI, 0, 0]);
+  for (const s of [-1, 1]) {
+    mk(menpo, G.cone(0.028, 0.2, 6), mask, [s * 0.09, 0.16, -0.04], [-0.3, 0, -s * 0.45]);
+    mk(head, G.sph(0.022, 8, 6), eye, [s * 0.045, 0.05, 0.12]);
+  }
+  mk(menpo, G.box(0.006, 0.12, 0.01), std(0x000000), [0.04, 0.0, 0.08], [0, 0, 0.4]); // rachadura
+  dmg[2].push(mk(menpo, G.box(0.08, 0.05, 0.02), skin, [0.05, -0.03, 0.07]));
+  // katana: tsuka trançada, tsuba, lâmina levemente curva; saya na cintura
+  const weapon = new THREE.Group(); weapon.position.set(0, -0.06, 0); handB.add(weapon);
+  mk(weapon, G.cyl(0.024, 0.024, 0.3, 8), lace, [0, 0, 0.04], [Math.PI / 2, 0, 0]);
+  for (let i = 0; i < 5; i++) mk(weapon, G.box(0.05, 0.012, 0.012), std(0xe8e0d0), [0, 0, -0.08 + i * 0.055], [0, 0, i % 2 ? 0.7 : -0.7]);
+  mk(weapon, G.cyl(0.075, 0.075, 0.015, 12), gold, [0, 0, 0.2], [Math.PI / 2, 0, 0]);
+  const bl = new THREE.Group(); weapon.add(bl); bl.position.z = 0.2;
+  for (let i = 0; i < 4; i++) mk(bl, G.box(0.012, 0.035, 0.24), blade, [0, i * i * 0.006, 0.12 + i * 0.235], [-i * 0.025, 0, 0]);
+  mk(bl, G.cone(0.018, 0.09, 4), blade, [0, 0.055, 1.0], [Math.PI / 2 - 0.1, 0, 0], [0.5, 1, 1]);
+  dmg[1].push(mk(bl, G.box(0.014, 0.02, 0.4), blood, [0, -0.012, 0.75]));
+  const weaponTip = new THREE.Object3D(); weaponTip.position.set(0, 0.06, 1.2); weapon.add(weaponTip);
+  const saya = mk(pelvis, G.box(0.04, 0.05, 0.85), std(0x14100e, { roughness: 0.4, metalness: 0.2 }), [0.22, 0.02, -0.05], [0.5, 0.25, 0]);
+  mk(saya, G.box(0.05, 0.06, 0.05), gold, [0, 0, 0.42]);
+  // chamas espectrais na lâmina (Oni Desperto) + espíritos que orbitam
+  const flames = new THREE.Group(); weapon.add(flames); flames.visible = false;
+  const fmat = new THREE.SpriteMaterial({ map: glowSprite('#4070ff'), blending: THREE.AdditiveBlending, depthWrite: false });
+  for (let i = 0; i < 7; i++) { const sp = new THREE.Sprite(fmat); sp.position.set(0, 0.03, 0.35 + i * 0.13); sp.scale.set(0.3, 0.5, 1); flames.add(sp); }
+  const orbs = new THREE.Group(); chest.add(orbs); orbs.position.y = 0.1;
+  const og = new THREE.SpriteMaterial({ map: glowSprite('#6090ff'), blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8 });
+  for (let i = 0; i < 2; i++) { const o = mk(orbs, G.sph(0.03, 8, 6), spirit, [0, 0, 0]); const g = new THREE.Sprite(og); g.scale.set(0.22, 0.22, 1); o.add(g); o.userData.ph = i * Math.PI; }
+  Object.assign(rig, { weapon, weaponTip, flames, orbs });
+  // ferimentos
+  dmg[1].push(mk(spine, G.box(0.2, 0.022, 0.02), blood, [0.05, 0.4, 0.22], [0, 0, 0.6]));
+  dmg[1].push(mk(head, G.box(0.1, 0.018, 0.02), blood, [-0.05, 0.08, 0.12], [0, 0, -0.5]));
+  dmg[2].push(mk(spine, G.sph(0.08, 8, 6), bruise, [-0.13, 0.25, 0.19], [0, 0, 0], [1, 1, 0.3]));
+  dmg[2].push(mk(shB, G.box(0.02, 0.2, 0.025), blood, [-0.07, -0.18, 0.05]));
+  dmg[3].push(mk(spine, G.sph(0.13, 10, 8), blood, [0.06, 0.3, 0.2], [0, 0, 0], [1, 1.3, 0.25]));
+  dmg[3].push(mk(hipB, G.sph(0.08, 8, 6), blood, [0, -0.2, 0.1], [0, 0, 0], [1, 1.6, 0.4]));
+  return { furyEmissive: [blade, eye, spirit], furyColor: 0x3060ff, blood, eye, skin };
+}
+
+// ---------------- BRAKKOR (v0.3) — PLACEHOLDER procedural: demônio gigante com chifres, fissuras de lava e mandíbula
+function buildBrakkor(rig, dmg, c) {
+  const skin = std(c.skin, { roughness: 0.85 });
+  const dark = std(c.dark, { roughness: 0.9 });
+  const horn = std(c.horn, { roughness: 0.55, metalness: 0.1 });
+  const lava = std(0x200400, { emissive: c.lava, emissiveIntensity: 1.5 });
+  const eye = std(0x000000, { emissive: c.eye, emissiveIntensity: 2.8 });
+  const iron = std(0x3a3a3e, { metalness: 0.8, roughness: 0.45 });
+  const cloth = std(c.cloth, { roughness: 0.95, side: THREE.DoubleSide });
+  const tooth = std(0xd8ccb0, { roughness: 0.5 });
+  const claw = std(0x1a1210, { metalness: 0.3, roughness: 0.4, emissive: 0x000000 });
+  const blood = std(0x5a0000, { roughness: 0.35, emissive: 0x200000 });
+  const bruise = std(0x1a0a18, { roughness: 0.9 });
+  const d = { hip: 1.18, thigh: 0.58, shin: 0.58, foot: 0.06, torso: 0.78, shoulder: 0.46, uarm: 0.42, farm: 0.4, armR: 0.15, legR: 0.17, hipW: 0.2 };
+  skeleton(rig, d, { upperArm: skin, foreArm: skin, hand: skin, thigh: skin, shin: dark, foot: horn });
+  dmg.skinMats.push(skin);
+  const { pelvis, spine, chest, head, neck, shA, shB, handA, handB, elA, elB, hipA, hipB, knA, knB, ankleA, ankleB } = rig;
+  // tronco colossal curvado + barriga + placas ósseas
+  mk(spine, G.cyl(0.52, 0.38, d.torso + 0.05, 14), skin, [0, d.torso * 0.5, 0.02], [0.12, 0, 0], [1, 1, 0.74]);
+  mk(spine, G.sph(0.34, 12, 10), skin, [0, 0.2, 0.12], [0, 0, 0], [1.05, 0.9, 0.8]);
+  for (const s of [-1, 1]) mk(spine, G.sph(0.2, 10, 8), skin, [s * 0.17, d.torso * 0.72, 0.22], [0, 0, 0], [1, 0.75, 0.55]); // peitorais
+  // fissuras de lava no peito e braços
+  const cracks = [];
+  for (const [x, y, r] of [[0.05, 0.5, 0.5], [-0.15, 0.32, -0.7], [0.2, 0.18, 0.9], [-0.05, 0.1, 0.2]]) cracks.push(mk(spine, G.box(0.18, 0.02, 0.02), lava, [x, y, 0.33], [0, 0, r]));
+  for (const e of [elA, elB]) { cracks.push(mk(e, G.box(0.02, 0.22, 0.02), lava, [0, -0.2, 0.13], [0, 0, 0.3])); }
+  // espinhos dorsais e corcunda
+  mk(chest, G.sph(0.36, 12, 8), skin, [0, d.torso * 0.25, -0.2], [0, 0, 0], [1.2, 0.8, 0.8]);
+  for (let i = 0; i < 6; i++) mk(spine, G.cone(0.05, 0.22 - i * 0.015, 6), horn, [0, 0.15 + i * 0.13, -0.32], [-1.0, 0, 0]);
+  // ombros com placas ósseas e espinhos
+  for (const [sh, s] of [[shA, 1], [shB, -1]]) {
+    const p = mk(sh, G.sph(0.24, 12, 8), dark, [s * 0.04, 0.02, 0], [0, 0, 0], [1, 0.75, 1]);
+    for (let i = 0; i < 3; i++) mk(p, G.cone(0.05, 0.28, 6), horn, [s * 0.06, 0.15, -0.1 + i * 0.1], [0, 0, -s * 0.5]);
+    if (s > 0) dmg.remove2.push(p);
+  }
+  // grilhões partidos nos pulsos com correntes
+  for (const e of [elA, elB]) { mk(e, G.cyl(0.16, 0.16, 0.14, 10), iron, [0, -d.farm + 0.08, 0]); }
+  swinger(rig, chainStrand(elA, [0.1, -d.farm + 0.05, 0], 5, iron, 0.04), { amp: 0.08, drag: 0.6, k: 30 });
+  swinger(rig, chainStrand(elB, [-0.1, -d.farm + 0.05, 0], 4, iron, 0.04), { amp: 0.08, drag: 0.6, k: 30 });
+  // mãos enormes com garras
+  for (const h of [handA, handB]) {
+    mk(h, G.box(0.2, 0.18, 0.18), skin, [0, -0.08, 0]);
+    for (let i = 0; i < 4; i++) mk(h, G.cone(0.025, 0.16, 5), claw, [-0.07 + i * 0.047, -0.22, 0.06], [0.4, 0, 0]);
+    mk(h, G.cone(0.025, 0.13, 5), claw, [0.1, -0.12, 0.08], [0.3, 0, -0.6]);
+  }
+  // tanga de couro e pele, cinto de crânios
+  mk(spine, G.cyl(0.42, 0.42, 0.13, 14), std(0x2a1810), [0, 0.0, 0.03], [0, 0, 0], [1, 1, 0.78]);
+  for (let i = 0; i < 5; i++) { const a = -0.9 + i * 0.45; mk(spine, G.sph(0.055, 8, 6), tooth, [Math.sin(a) * 0.42, 0.0, Math.cos(a) * 0.33 + 0.02], [0, 0, 0], [1, 1.1, 0.9]); }
+  const flapF = strip(pelvis, [0, -0.04, 0.3], 0.36, 0.55, cloth, [-0.05, 0, 0], 0.04);
+  const flapB = strip(pelvis, [0, -0.04, -0.28], 0.4, 0.5, cloth, [0.05, 0, 0], 0.04);
+  swinger(rig, flapF, { amp: 0.03, drag: 0.6, followK: 0.5 }); swinger(rig, flapB, { amp: 0.03, drag: -0.6, followK: 0.5 });
+  rig.flapF = flapF; rig.flapB = flapB;
+  // cauda segmentada com ponta óssea
+  const tail = new THREE.Group(); tail.position.set(0, 0.02, -0.3); tail.rotation.x = 0.9; pelvis.add(tail);
+  let seg = tail;
+  for (let i = 0; i < 5; i++) {
+    const g = new THREE.Group(); g.position.y = i ? -0.2 : 0; seg.add(g);
+    mk(g, G.cyl(0.08 - i * 0.012, 0.07 - i * 0.012, 0.22, 8), skin, [0, -0.1, 0]);
+    swinger(rig, g, { amp: 0.12, freq: 1.3 + i * 0.1, drag: -0.4, k: 25, damp: 4 });
+    seg = g;
+  }
+  mk(seg, G.cone(0.06, 0.18, 5), horn, [0, -0.25, 0], [Math.PI, 0, 0]);
+  // pernas de bode: joelhos ósseos, cascos
+  for (const kn of [knA, knB]) mk(kn, G.sph(0.13, 8, 6), dark, [0, 0, 0.08], [0, 0, 0], [1, 1, 0.7]);
+  for (const an of [ankleA, ankleB]) { mk(an, G.cyl(0.13, 0.15, 0.12, 8), horn, [0, -0.02, 0.04]); }
+  // cabeça: mandíbula, presas, chifres em espiral, olhos de brasa
+  mk(neck, G.cyl(0.18, 0.24, 0.2, 10), skin, [0, 0.0, 0.05]);
+  mk(head, G.sph(0.2, 14, 10), skin, [0, 0.05, 0.04], [0, 0, 0], [1, 0.95, 1.05]);
+  mk(head, G.box(0.3, 0.06, 0.1), dark, [0, 0.1, 0.18]); // sobrancelha
+  for (const s of [-1, 1]) {
+    mk(head, G.sph(0.03, 8, 6), eye, [s * 0.08, 0.06, 0.21]);
+    let hp = head, pos = [s * 0.15, 0.18, 0.0], r = 0.07;
+    for (let i = 0; i < 5; i++) { const g = new THREE.Group(); g.position.set(...pos); g.rotation.set(-0.35, 0, -s * (0.55 - i * 0.05)); hp.add(g); mk(g, G.cyl(r * 0.8, r, 0.13, 8), horn, [0, 0.065, 0]); hp = g; pos = [0, 0.13, 0]; r *= 0.8; }
+    mk(hp, G.cone(r, 0.14, 8), horn, [0, 0.07, 0]);
+  }
+  const jaw = new THREE.Group(); jaw.position.set(0, -0.06, 0.05); head.add(jaw);
+  mk(jaw, G.box(0.28, 0.08, 0.26), skin, [0, -0.04, 0.06]);
+  mk(jaw, G.box(0.22, 0.02, 0.2), lava, [0, 0.0, 0.08]); // garganta incandescente
+  for (let i = 0; i < 6; i++) mk(jaw, G.cone(0.016, 0.07, 4), tooth, [-0.1 + i * 0.04, 0.03, 0.18]);
+  for (const s of [-1, 1]) mk(jaw, G.cone(0.025, 0.13, 5), tooth, [s * 0.12, 0.06, 0.15], [0, 0, s * 0.15]);
+  rig.jaw = jaw;
+  // "arma": garra direita (ponta para rastros e cinemáticas) + chamas da transformação nos chifres/ombros
+  const weapon = new THREE.Group(); handA.add(weapon);
+  const weaponTip = new THREE.Object3D(); weaponTip.position.set(0, -0.3, 0.08); weapon.add(weaponTip);
+  const flames = new THREE.Group(); chest.add(flames); flames.visible = false;
+  const fmat = new THREE.SpriteMaterial({ map: glowSprite('#ff5a10'), blending: THREE.AdditiveBlending, depthWrite: false });
+  for (let i = 0; i < 8; i++) { const sp = new THREE.Sprite(fmat); const a = (i / 7 - 0.5) * 2.6; sp.position.set(Math.sin(a) * 0.45, d.torso * 0.45 + Math.cos(a) * 0.12, -0.15); sp.scale.set(0.35, 0.55, 1); flames.add(sp); }
+  Object.assign(rig, { weapon, weaponTip, flames });
+  // ferimentos
+  dmg[1].push(mk(spine, G.box(0.25, 0.03, 0.02), blood, [0.1, 0.55, 0.36], [0, 0, 0.5]));
+  dmg[1].push(mk(head, G.box(0.12, 0.02, 0.02), blood, [0.06, 0.12, 0.23], [0, 0, -0.4]));
+  dmg[2].push(mk(spine, G.sph(0.12, 8, 6), bruise, [-0.2, 0.4, 0.3], [0, 0, 0], [1, 1, 0.3]));
+  dmg[2].push(mk(shB, G.box(0.03, 0.25, 0.03), blood, [-0.12, -0.2, 0.1]));
+  dmg[3].push(mk(spine, G.sph(0.18, 10, 8), blood, [0.05, 0.3, 0.33], [0, 0, 0], [1, 1.3, 0.25]));
+  dmg[3].push(mk(hipA, G.sph(0.12, 8, 6), blood, [0, -0.3, 0.14], [0, 0, 0], [1, 1.6, 0.4]));
+  return { furyEmissive: [lava, eye, claw], furyColor: 0xff7a10, blood, eye, skin };
+}
+
 export function applyPose(fm, p, extra) {
   const r = fm.rig, d = r.dims;
   const legReach = (lx, k) => d.thigh * Math.cos(lx) + d.shin * Math.cos(lx + k);

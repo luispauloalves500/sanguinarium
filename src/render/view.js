@@ -130,13 +130,13 @@ export class GameView {
         case 'move': {
           const m = match.fighters[e.who].move;
           if (e.kind === 'normal') A.play(m && m.hits[0] && m.hits[0].heavy ? 'heavyWhoosh' : 'whoosh');
-          else if (e.kind === 'special') A.play(e.who !== undefined && match.fighters[e.who].charId === 'lilith' ? 'magic' : 'heavyWhoosh');
+          else if (e.kind === 'special') A.play(e.who !== undefined && match.fighters[e.who].ch.magicSfx ? 'magic' : 'heavyWhoosh');
           if (e.id === 'corrente' || e.id === 'prisao') A.play('chain');
           break;
         }
-        case 'proj': A.play('proj', { kind: e.kind }); break;
+        case 'proj': A.play('proj', { kind: e.kind }); if (e.kind === 'quake') { cam.shake(0.5); A.play('land', { heavy: true }); } break;
         case 'clash': B.spark(e.x, e.y, 0.2, 30, 0xff8040, 2); A.play('clash'); cam.shake(0.15); break;
-        case 'teleport': { const f = match.fighters[e.who]; B.aura(f.x, 1, 0, 40, 0xff1838, 1.2, 0.03); A.play('teleport'); break; }
+        case 'teleport': { const f = match.fighters[e.who]; B.aura(f.x, 1, 0, 40, f.ch.aura || 0xff1838, 1.2, 0.03); A.play('teleport'); break; }
         case 'heal': { const f = match.fighters[e.who]; if (e.frame % 3 === 0) B.aura(f.x, 1, 0, 3, 0xff4060, 0.9, 0.03); if (e.frame % 15 === 0) A.play('heal'); break; }
         case 'fury': { const f = match.fighters[e.who]; B.aura(f.x, 1, 0, 80, 0xff5010, 1.6, 0.05); A.play('fury'); this.hud.message(e.name.toUpperCase() + '!', 'big', 80); cam.shake(0.2); break; }
         case 'furyEnd': break;
@@ -150,7 +150,9 @@ export class GameView {
           if (e.heavy) { cam.shake(0.12); const f = match.fighters[e.who]; if (f.hp < 500) B.pool(f.x, 0.1, 0.5 + (500 - f.hp) / 600); }
           break;
         case 'breaker': this.hud.message('QUEBRA DE COMBO!', 'big', 60); B.spark(e.x, 1.2, 0.2, 40, 0x60c0ff, 2); A.play('clash'); break;
-        case 'counterStance': this.hud.message('VÉU ESCARLATE!', 'small', 50); B.aura(e.x, 1, 0, 50, 0xff1838, 1.2, 0.03); A.play('teleport'); break;
+        case 'counterStance': { const ch = match.fighters[e.who].ch; this.hud.message((e.name || 'Véu Escarlate').toUpperCase() + '!', 'small', 50); B.aura(e.x, 1, 0, 50, ch.aura || 0xff1838, 1.2, 0.03); A.play(ch.magicSfx ? 'teleport' : 'clash'); break; }
+        case 'armor': B.spark(e.x, e.y, 0.2, 18, 0xffc060, 1.6); A.play('block'); this.hud.message('SUPERARMADURA', 'small', 30); cam.shake(0.12); break;
+        case 'quake': cam.shake(0.45); A.play('land', { heavy: true }); B.spark(e.x, 0.1, 0.2, 30, 0xff8040, 1.8); break;
         case 'freeze': A.play('freeze'); break;
         case 'pull': A.play('chain'); break;
         case 'jump': A.play('jump'); break;
@@ -270,7 +272,7 @@ export class GameView {
     // fúria: chamas na arma / mãos
     if (f.furyActive > 0 && !f.hidden) {
       const tp = this._v; m.rig.weaponTip.getWorldPosition(tp);
-      this.blood.aura(tp.x, tp.y, tp.z, 2, f.charId === 'varkhan' ? 0xff6010 : 0xff1030, 0.25, 0.03);
+      this.blood.aura(tp.x, tp.y, tp.z, 2, f.ch.aura || 0xff1030, 0.25, 0.03);
     }
     // visual da Corrente da Morte
     const chainOn = f.move && f.move.id === 'corrente' && f.state === 'attack' && f.mf >= 8 && f.mf <= 24;
@@ -301,6 +303,21 @@ export class GameView {
     if (f.move && (f.move.id === 'veu' || f.move.id === 'regen') && f.mf % 2 === 0) this.blood.aura(f.x, 1.1, 0, 2, 0xff1838, 0.9, f.move.id === 'regen' ? 0.03 : 0);
     if (f.move && f.move.id === 'passo' && f.mf < 18) this.blood.aura(f.x - f.facing * 0.3, 1.1, 0, 3, 0x80a0ff, 0.6, 0);
     if (f.move && f.move.id === 'tormenta' && f.mf >= 10 && f.mf <= 40) { const tp = new THREE.Vector3(); m.rig.weaponTip.getWorldPosition(tp); this.blood.spark(tp.x, tp.y, tp.z, 1, 0xffc080, 0.4); }
+    // Kazuro / Brakkor (v0.3)
+    if (f.move) {
+      const id = f.move.id, mf = f.mf;
+      const tip = () => { const tp = new THREE.Vector3(); m.rig.weaponTip.getWorldPosition(tp); return tp; };
+      if (f.charId === 'kazuro' && f.move.hits.some((h) => h.slash) && f.move.hits.some((h) => mf >= h.f0 - 2 && mf <= h.f1 + 1)) { const tp = tip(); this.blood.aura(tp.x, tp.y, tp.z, 2, 0x6090ff, 0.15, 0); }
+      if ((id === 'investida' || id === 'passo_sombras' || id === 'tempestade') && mf < 16 && mf % 2 === 0) this.blood.aura(f.x - f.facing * 0.4, 1.0, 0, 2, 0x4060c0, 0.5, 0);
+      if (id === 'reflexo' && mf % 3 === 0 && mf <= 24) this.blood.aura(f.x + f.facing * 0.3, 1.2, 0, 1, 0x80b0ff, 0.5, 0);
+      if (id === 'iaijutsu' && mf === 14) { this.hud.flash(0.12); this.cam.shake(0.2); }
+      if (id === 'sopro' && mf >= 12 && mf <= 36) { const hx = f.x + f.facing * 0.5, hy = f.ch.height * 0.9; for (let i = 0; i < 3; i++) this.blood.aura(hx + f.facing * Math.random() * 1.8, hy - Math.random() * 0.7, (Math.random() - 0.5) * 0.4, 1, i % 2 ? 0xff7010 : 0xffb030, 0.35, 0.02); }
+      if (id === 'investida_touro' && mf >= 7 && mf <= 26 && mf % 2 === 0) { this.blood.spark(f.x - f.facing * 0.5, 0.05, 0.3, 2, 0x8a6a50, 0.6); }
+      if (id === 'punho_magma' && mf >= 6 && mf <= 22) { const h = new THREE.Vector3(); m.rig.handA.getWorldPosition(h); this.blood.aura(h.x, h.y, h.z, 2, 0xff5010, 0.25, 0.02); }
+      if (f.move.armor && mf >= f.move.armor[0] && mf <= f.move.armor[1] && mf % 3 === 0) this.blood.aura(f.x, 1.2, 0, 1, 0xffc060, 0.9, 0);
+      if (id === 'salto' && mf === 34) { this.cam.shake(0.4); this.blood.spark(f.x + f.facing * 0.6, 0.1, 0.2, 26, 0xff9040, 1.6); this.audio.play('land', { heavy: true }); }
+      if (id === 'terremoto' && mf === 20) { this.blood.spark(f.x + f.facing * 0.8, 0.1, 0.2, 24, 0xff9040, 1.5); }
+    }
     if (f.move && (f.move.id === 'julgamento' || f.move.id === 'ruptura') && f.mf === (f.move.id === 'julgamento' ? 21 : 18)) { this.cam.shake(0.25); this.blood.spark(f.x + f.facing * 1.4, 0.1, 0.2, 20, 0xff9040, 1.5); this.audio.play('land', { heavy: true }); }
   }
 
@@ -338,6 +355,28 @@ export class GameView {
         ring.rotation.x = -Math.PI / 2; g.userData.ring = ring; this.scene.add(ring);
         break;
       }
+      case 'slash': {
+        // meia-lua espectral (Kazuro)
+        const mat = new THREE.MeshBasicMaterial({ color: 0x80b0ff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+        const arc = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 4, 24, Math.PI), mat); arc.rotation.z = -Math.PI / 2 * p.facing; arc.scale.set(1, p.ex ? 1.5 : 1.1, 0.4); g.add(arc);
+        const arc2 = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.025, 4, 20, Math.PI), mat); arc2.rotation.z = arc.rotation.z; arc2.position.x = -p.facing * 0.15; g.add(arc2);
+        const s = new THREE.Sprite(glowMat('#6090ff')); s.scale.set(1.2, 1.4, 1); g.add(s);
+        break;
+      }
+      case 'fireball': {
+        const core = new THREE.Mesh(new THREE.IcosahedronGeometry(p.ex ? 0.36 : 0.28, 1), em(0xff7010, 2.2)); g.add(core);
+        const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(p.ex ? 0.5 : 0.4, 1), new THREE.MeshBasicMaterial({ color: 0xff3000, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }));
+        g.add(shell); g.userData.shell = shell;
+        const s = new THREE.Sprite(glowMat('#ff5010')); s.scale.set(1.9, 1.9, 1); g.add(s);
+        break;
+      }
+      case 'quake': {
+        const mat = new THREE.MeshStandardMaterial({ color: 0x3a2018, roughness: 1, emissive: 0x501800 });
+        const n = p.ex ? 12 : 8;
+        for (let i = 0; i < n; i++) { const r = new THREE.Mesh(new THREE.ConeGeometry(0.16 + Math.random() * 0.14, 0.5 + Math.random() * 0.6, 5), mat); r.position.set((i / (n - 1) - 0.5) * (p.box[2] - p.box[0]), 0.2, (Math.random() - 0.5) * 0.6); r.rotation.set((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.7); g.add(r); }
+        const s = new THREE.Sprite(glowMat('#ff6010')); s.scale.set(p.box[2] - p.box[0], 0.8, 1); s.position.y = 0.15; g.add(s);
+        break;
+      }
       case 'spikes': {
         const mat = em(0xff1030, 0.9);
         for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.3, 5), mat); c.position.set((i - 2.5) * 0.18, 0.65, (Math.random() - 0.5) * 0.3); c.rotation.z = (i - 2.5) * 0.12; g.add(c); }
@@ -345,9 +384,10 @@ export class GameView {
       }
       case 'clone': {
         const ghost = buildFighter(match.fighters[p.owner].charId, false);
-        const gm = new THREE.MeshBasicMaterial({ color: 0xff1030, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+        const och = match.fighters[p.owner].ch;
+        const gm = new THREE.MeshBasicMaterial({ color: och.aura || 0xff1030, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
         ghost.root.traverse((o) => { if (o.isMesh) { o.material = gm; o.castShadow = false; } });
-        applyPose(ghost, POSES.lunge_s, {});
+        applyPose(ghost, POSES[och.clonePose || 'lunge_s'], {});
         ghost.root.rotation.y = p.facing > 0 ? Math.PI / 2 : -Math.PI / 2;
         g.add(ghost.root);
         break;
@@ -373,11 +413,14 @@ export class GameView {
         o.visible = p.delay <= 0; o.position.y = p.y + 0.5;
         const r = o.userData.ring; r.position.set(p.x, 0.03, 0); r.scale.setScalar(1 + Math.sin(this.time * 20) * 0.1);
       }
+      if (p.fx === 'slash' && Math.random() < 0.7) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0x6090ff, 0.2, 0);
+      if (p.fx === 'fireball') { o.rotation.y += dt * 6; o.rotation.x += dt * 4; o.userData.shell.scale.setScalar(1 + Math.sin(this.time * 25) * 0.12); if (Math.random() < 0.9) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0xff5010, 0.15, 0.02); }
+      if (p.fx === 'quake') { o.position.y = 0; const k = p.delay > 0 ? 0.2 : Math.min(1, 0.4 + (10 - p.life) * 0.2); o.scale.set(1, k, 1); if (Math.random() < 0.6) this.blood.spark(p.x + (Math.random() - 0.5) * 3, 0.1, 0.2, 1, 0xff8040, 0.8); }
       if (p.fx === 'spikes') { o.position.y = 0; const k = p.delay > 0 ? 0.15 + (1 - p.delay / 8) * 0.2 : 1; o.scale.set(p.ex ? 1.6 : 1, k, 1); }
     }
     for (const [id, v] of this.proj) {
       if (!seen.has(id)) {
-        if (v.fx === 'spear' || v.fx === 'axe' || v.fx === 'chains') this.blood.spark(v.obj.position.x, v.obj.position.y, 0.2, 10, 0xff4020, 1);
+        if (v.fx === 'spear' || v.fx === 'axe' || v.fx === 'chains' || v.fx === 'fireball' || v.fx === 'slash') this.blood.spark(v.obj.position.x, v.obj.position.y, 0.2, 10, 0xff4020, 1);
         if (v.obj.userData.ring) { this.scene.remove(v.obj.userData.ring); dispose(v.obj.userData.ring); }
         this.scene.remove(v.obj); dispose(v.obj); this.proj.delete(id);
       }

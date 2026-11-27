@@ -529,3 +529,398 @@ Object.assign(SUPERS, {
     cam.setCine(V(mid - Math.sin(f * 0.018) * 3.2 * dir, 0.8 + f * 0.006, 3.6), V(dx, 1.2 + Math.min(1, juggles * 0.25), 0), 3);
   },
 });
+
+// ======================================================================
+// v0.3 — KAZURO e BRAKKOR
+// ======================================================================
+const SPECTRAL = 0x6090ff;
+// arco de corte espectral que aparece e some (rastro de lâmina)
+function slashArc(vfx, x, y, z, rot, color = SPECTRAL, size = 0.9, life = 0.35) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(size, 0.025, 4, 28, Math.PI * 0.9),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  m.position.set(x, y, z); m.rotation.set(rot[0], rot[1], rot[2]);
+  vfx.add(m, life, (o, age) => { o.material.opacity = Math.max(0, 1 - age / life); o.scale.setScalar(1 + age * 1.2); });
+  return m;
+}
+// imagem residual de um lutador numa pose, em posição do mundo
+function afterimage(vfx, charId, color, poseName, x, z, faceX, life = 0.4, scale = 1, op = 0.5) {
+  const g = ghostOf(charId, color);
+  applyPose(g, POSES[poseName], {});
+  g.root.position.set(x, 0, z); g.root.scale.setScalar(scale);
+  g.root.lookAt(faceX, 0, 0);
+  vfx.add(g.root, life, (o, age) => o.traverse((c) => { if (c.isMesh) c.material.opacity = op * Math.min(1, age * 8) * Math.max(0, 1 - age / life); }));
+  return g;
+}
+// fragmenta o corpo do derrotado em pedaços (cabeça, braços, pernas, tronco)
+function shatter(ctx, power = 1, color = null) {
+  const { def, dir, vfx, blood } = ctx;
+  const r = def.model.rig;
+  const parts = [[r.head, [0.02, 0.12, 0]], [r.shA, [0.05, 0.08, 0.04]], [r.shB, [-0.05, 0.08, -0.04]], [r.hipA, [0.04, 0.05, 0.03]], [r.hipB, [-0.04, 0.05, -0.03]], [r.chest, [0, 0.06, 0]]];
+  for (const [p, v] of parts) {
+    const wp = worldPos(p);
+    vfx.detach(p, V((v[0] + (Math.random() - 0.5) * 0.04) * power * dir, v[1] * power, v[2] * power), V(Math.random() * 0.2, Math.random() * 0.2, Math.random() * 0.2), {
+      restY: 0.1, bounce: 0.25, trail: (q, age, rest) => { if (!rest && Math.random() < 0.6) blood.drip(q.x, q.y, q.z); } });
+    if (color) blood.aura(wp.x, wp.y, wp.z, 8, color, 0.3, 0.02);
+    blood.burst(wp.x, wp.y, wp.z, dir, 40, 1.2);
+  }
+}
+
+Object.assign(FATALITIES, {
+  // ---------------- KAZURO: Mil Cortes (GDD §9.1) — cortes espectrais velozes, guarda a espada, fragmentação
+  mil_cortes(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    if (f < 40) { pose(att, 'iai_w', { speed: 5 }); cam.setCine(V(ax - dir * 0.6, 0.7, 2.2), V(ax + dir * 0.4, 1.0, 0), 3); }
+    else if (f < 150) { pose(att, Math.floor(f / 6) % 2 ? 'flurry_s' : 'flurry_w', { speed: 40 }); }
+    else if (f < 215) pose(att, f < 175 ? 'iai_s' : 'sheathe', { speed: f < 175 ? 20 : 5 });
+    else pose(att, 'winKazuro', { speed: 4 });
+    att.model.root.visible = !(f >= 44 && f < 150);
+    pose(def, f < 205 ? (f >= 40 && f < 150 && f % 6 < 3 ? 'hitHigh' : 'frozen') : 'frozen', { speed: 30, tilt: f >= 40 && f < 150 ? (Math.random() - 0.5) * 0.06 : 0 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(4.5); });
+    ctx.once('vanish', 44, () => { audio.play('teleport'); blood.aura(ax, 1.0, 0, 30, SPECTRAL, 1.0, 0.02); });
+    if (f >= 44 && f < 150) {
+      if (f % 4 === 0) { slashArc(vfx, dx + (Math.random() - 0.5) * 0.4, 0.6 + Math.random() * 1.2, 0.05, [Math.random() * 3, Math.random() * 3, Math.random() * 3], SPECTRAL, 0.5 + Math.random() * 0.4); audio.play('whoosh'); }
+      if (f % 8 === 2) blood.burst(dx, 0.6 + Math.random() * 1.1, 0, Math.random() < 0.5 ? dir : -dir, 14, 0.8);
+      if (f % 18 === 0) { const a = Math.random() * Math.PI * 2; afterimage(vfx, 'kazuro', SPECTRAL, 'flurry_s', dx + Math.cos(a) * 1.0, Math.sin(a) * 0.8, dx, 0.3); }
+      const ang = f * 0.05;
+      cam.setCine(V(dx + Math.sin(ang) * 2.6, 1.3, Math.cos(ang) * 2.6), V(dx, 1.1, 0), 4);
+    }
+    ctx.once('re', 150, () => { audio.play('teleport'); blood.aura(ax, 1.0, 0, 30, SPECTRAL, 1.0, 0.02); });
+    if (f >= 150 && f < 205) cam.setCine(V(ax + dir * 0.9, 1.4, 1.8), V(ax, 1.2, 0), 3);
+    ctx.once('click', 198, () => { audio.play('block'); });
+    ctx.once('shatter', 205, () => {
+      shatter(ctx, 0.9, SPECTRAL);
+      blood.gore(dx, 1.0, 0, 50, FLESH);
+      audio.play('gore'); audio.play('explosion'); cam.shake(0.5);
+      ctx.view.flash(0x80b0ff, 60, 0.6, dx, 1.2, 1);
+      pose(def, 'lying', { lie: 1 });
+    });
+    if (f >= 205) { if (f < 260) blood.fountain(dx, 0.9, 0, 0, 1, 2, 1 - (f - 205) / 60); cam.setCine(V(mid, 1.6, 4.4), V(mid, 0.8, 0), 2); }
+    ctx.once('pool', 215, () => blood.pool(dx, 0.1, 2.0));
+  },
+
+  // ---------------- KAZURO: Último Suspiro (GDD) — atravessa o oponente; a alma escapa e o corpo se desfaz em dois
+  ultimo_suspiro(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    if (f < 50) { pose(att, 'iai_w', { speed: 4 }); cam.setCine(V(ax - dir * 1.0, 1.0, 2.6), V(dx, 1.1, 0), 2.5); }
+    else if (f < 200) pose(att, 'iai_s', { speed: 30 });
+    else pose(att, f < 230 ? 'sheathe' : 'winKazuro', { speed: 4 });
+    pose(def, f < 180 ? 'frozen' : 'kneel', { speed: f < 180 ? 10 : 3 });
+    ctx.once('dash', 52, () => {
+      audio.play('heavyWhoosh'); ctx.hud.flash(0.4);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(dx - ax) + 1.2, 0.025, 0.025), new THREE.MeshBasicMaterial({ color: 0xc0d8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+      line.position.set((ax + dx) / 2, 1.2, 0.05);
+      vfx.add(line, 0.6, (o, age) => { o.material.opacity = 1 - age / 0.6; o.scale.y = 1 + age * 6; });
+      for (let i = 0; i < 4; i++) afterimage(vfx, 'kazuro', SPECTRAL, 'dashSlash_s', lerp(ax, dx, i / 4), 0, dx + dir * 3, 0.5, 1, 0.35);
+    });
+    if (f >= 52 && f < 180) cam.setCine(V(dx + dir * 1.2, 1.5, 2.4), V(dx, 1.4, 0), 2);
+    // a alma escapa
+    ctx.once('soul', 80, () => {
+      audio.play('heartbeat');
+      const g = ghostOf(CHAR_OF(def), 0xc0e0ff);
+      applyPose(g, POSES.dangle, {});
+      g.root.position.set(dx, 0, 0); g.root.lookAt(ax, 0, 0);
+      state.soul = vfx.add(g.root, 1.8, (o, age) => { o.position.y = age * 0.9; o.traverse((c) => { if (c.isMesh) c.material.opacity = 0.45 * Math.max(0, 1 - age / 1.8); }); });
+    });
+    for (const t of [110, 140]) ctx.once('hb' + t, t, () => audio.play('heartbeat'));
+    ctx.once('cut', 180, () => {
+      const sp = def.model.rig.chest, wp = worldPos(sp);
+      goreCap(sp, [0, -0.02, 0], 0.12, glowRed());
+      vfx.detach(sp, V(-dir * 0.02, 0.02, 0.01), V(0, 0, dir * 0.03), { restY: 0.25, bounce: 0.2 });
+      state.cut = wp;
+      blood.burst(wp.x, wp.y, wp.z, dir, 120, 1.4); blood.gore(wp.x, wp.y, wp.z, 30, FLESH);
+      audio.play('gore'); audio.play('hit', { heavy: true, slash: true }); cam.shake(0.45);
+      ctx.view.flash(0xc0d8ff, 50, 0.4, dx, 1.3, 1);
+    });
+    if (state.cut && f < 260) blood.fountain(state.cut.x, state.cut.y - 0.1, 0, 0, 1, 2, 1 - (f - 180) / 90);
+    if (f >= 180) cam.setCine(V(lerp(ax, dx, 0.5), 1.4, 3.8), V(lerp(ax, dx, 0.6), 0.9, 0), 2);
+    ctx.once('pool', 200, () => blood.pool(dx, 0.1, 1.6));
+  },
+
+  // ---------------- KAZURO: Corte Fantasma (nome proposto) — três duplicatas atravessam o oponente ao mesmo tempo
+  corte_fantasma(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 90 ? 'guard_s' : f < 200 ? 'katana_s' : 'winKazuro', { speed: 6 });
+    pose(def, f < 92 ? 'dizzy' : f < 170 ? 'crucified' : 'lying', f >= 170 ? { lie: 1, speed: 3 } : { speed: 12 });
+    const spots = [[-1.1, 0.7], [1.1, 0.6], [0.2, -1.1]];
+    if (!state.clones) state.clones = [];
+    spots.forEach(([ox, oz], i) => ctx.once('c' + i, 25 + i * 16, () => {
+      const g = ghostOf('kazuro', SPECTRAL);
+      g.root.position.set(dx + ox * dir, 0, oz); g.root.lookAt(dx, 0, 0);
+      state.clones.push(g);
+      vfx.add(g.root, 2.2, (o, age) => {
+        const k = ctx.f;
+        applyPose(g, POSES[k < 86 ? 'katana_w' : 'katana_s'], {});
+        if (k >= 86 && k < 96) o.position.lerp(V(dx - ox * dir * 0.6, 0, -oz * 0.6), 0.35);
+        o.traverse((c) => { if (c.isMesh) c.material.opacity = 0.55 * Math.min(1, age * 4) * (k > 120 ? Math.max(0, 1 - (k - 120) / 20) : 1); });
+      });
+      audio.play('teleport'); blood.aura(dx + ox * dir, 1.0, oz, 20, SPECTRAL, 0.8, 0.02);
+    }));
+    if (f < 86) cam.setCine(V(dx + Math.sin(f * 0.03) * 3, 2.0, 3.0), V(dx, 1.0, 0), 2);
+    ctx.once('strike', 90, () => {
+      audio.play('heavyWhoosh'); audio.play('gore'); cam.shake(0.5); ctx.hud.flash(0.5);
+      for (let i = 0; i < 3; i++) slashArc(vfx, dx, 1.0 + i * 0.25, 0, [i * 1.1, i * 0.7, 0.4], SPECTRAL, 1.1, 0.6);
+      for (const s of [def.model.rig.shA, def.model.rig.shB]) { const wp = worldPos(s); vfx.detach(s, V((s === def.model.rig.shA ? 1 : -1) * 0.05, 0.1, 0.05), V(0.2, 0.1, 0.2), { restY: 0.1 }); blood.burst(wp.x, wp.y, wp.z, dir, 60, 1.3); }
+      blood.gore(dx, 1.2, 0, 30, FLESH);
+    });
+    if (f >= 90 && f < 170) { if (f % 2 === 0) blood.fountain(dx, 1.45, 0, 0, 1, 2, 0.9); cam.setCine(V(dx + dir * 1.6, 1.3, 2.2), V(dx, 1.2, 0), 3); }
+    ctx.once('head', 150, () => { const n = def.model.rig.neck, wp = worldPos(n); goreCap(n, [0, -0.02, 0], 0.08, glowRed()); vfx.detach(n, V(dir * 0.02, 0.1, 0.02), V(0.2, 0.1, 0.1), { restY: 0.15 }); blood.burst(wp.x, wp.y, wp.z, dir, 60, 1.2); audio.play('gore'); });
+    ctx.once('pool', 175, () => blood.pool(dx, 0.1, 1.8));
+    if (f >= 170) cam.setCine(V(ax - dir * 0.5, 1.6, 3.6), V((ax + dx) / 2, 1.0, 0), 2);
+  },
+
+  // ---------------- KAZURO: Possessão Oni (nome proposto) — a entidade deixa Kazuro, possui o oponente e o queima por dentro
+  possessao_oni(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 40 ? 'roar_w' : f < 160 ? 'roar_s' : f < 250 ? 'guard_s' : 'winKazuro', { speed: 5 });
+    pose(def, f < 110 ? 'dizzy' : f < 230 ? 'writhe' : 'lying', f >= 230 ? { lie: 1, speed: 3 } : { speed: 10, tilt: f >= 110 ? Math.sin(f * 0.7) * 0.12 : 0, lift: f >= 140 && f < 230 ? Math.min(0.5, (f - 140) * 0.01) : 0 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(5); });
+    ctx.once('oni', 40, () => {
+      audio.play('fury');
+      const g = ghostOf('kazuro', 0x3050ff);
+      applyPose(g, POSES.roar_s, {}); g.root.scale.setScalar(1.7);
+      g.root.position.set(ax, 0, -0.3); g.root.lookAt(dx, 0, 0);
+      state.oni = vfx.add(g.root, 1.9, (o, age) => {
+        const k = ctx.f;
+        if (k >= 70) { const t = Math.min(1, (k - 70) / 40); o.position.set(lerp(ax, dx, t), Math.sin(t * Math.PI) * 0.6, lerp(-0.3, 0, t)); o.scale.setScalar(lerp(1.7, 0.8, t)); }
+        o.traverse((c) => { if (c.isMesh) c.material.opacity = 0.5 * Math.min(1, age * 3) * (k > 108 ? Math.max(0, 1 - (k - 108) / 6) : 1); });
+      });
+    });
+    if (f < 110) cam.setCine(V(lerp(ax, dx, f / 110) - dir * 0.5, 1.8, 3.8), V(lerp(ax, dx, f / 110), 1.6, 0), 2);
+    ctx.once('enter', 110, () => { audio.play('magic'); cam.shake(0.3); tintModel(def.model, 0x202040, 0.35, 0x2040ff, 0.25); blood.aura(dx, 1.0, 0, 50, SPECTRAL, 0.8, 0.03); });
+    if (f >= 110 && f < 230) {
+      if (f % 3 === 0) blood.aura(dx, 0.9 + Math.random() * 0.8, 0, 2, SPECTRAL, 0.4, 0.03);
+      if (f % 20 === 0) { audio.play('heartbeat'); blood.burst(dx, 1.0 + Math.random() * 0.6, 0, Math.random() < 0.5 ? 1 : -1, 25, 0.8); }
+      cam.setCine(V(dx + dir * 1.4 + Math.sin(f * 0.02), 1.4, 2.4), V(dx, 1.3, 0), 3);
+    }
+    ctx.once('rupt', 200, () => tintModel(def.model, 0x101018, 0.5, 0x60a0ff, 0.7));
+    ctx.once('burst', 230, () => {
+      shatter(ctx, 1.3, SPECTRAL);
+      blood.gore(dx, 1.1, 0, 60, ASH); blood.gore(dx, 1.1, 0, 30, FLESH);
+      audio.play('explosion'); audio.play('gore'); cam.shake(0.6); ctx.hud.flash();
+      ctx.view.flash(0x4070ff, 80, 0.8, dx, 1.3, 1);
+    });
+    if (f >= 230) cam.setCine(V(ax - dir * 0.4, 1.8, 4.0), V((ax + dx) / 2, 1.1, 0), 2);
+    ctx.once('pool', 240, () => blood.pool(dx, 0.1, 1.8));
+  },
+
+  // ---------------- BRAKKOR: Devorador de Almas (GDD) — arranca a alma e a devora; o corpo vira casca e pó
+  devorador_almas(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 40 ? 'grab_s' : f < 200 ? 'devour' : f < 230 ? 'roar_s' : 'winBrakkor', { speed: 6 });
+    const lift = f < 30 ? 0 : Math.min(0.8, (f - 30) * 0.02);
+    pose(def, f < 200 ? 'dangle' : f < 230 ? 'husk' : 'husk', { lift: f < 215 ? lift : 0, speed: 6, tilt: Math.sin(f * 0.5) * 0.05 });
+    if (att.model.rig.jaw) att.model.rig.jaw.rotation.x = f >= 70 && f < 200 ? 0.5 + Math.sin(f * 0.3) * 0.08 : 0;
+    ctx.once('a', 1, () => { audio.play('throw'); ctx.view.darken(5); });
+    if (f < 70) cam.setCine(V((ax + dx) / 2, 1.4, 3.4), V((ax + dx) / 2, 1.6, 0), 2);
+    ctx.once('roar', 60, () => { audio.play('fury'); cam.shake(0.3); });
+    ctx.once('soul', 80, () => {
+      const g = ghostOf(CHAR_OF(def), 0xa0e0ff);
+      applyPose(g, POSES.writhe, {});
+      g.root.position.set(dx, lift, 0); g.root.lookAt(ax, 0, 0);
+      const mouth = worldPos(att.model.rig.head);
+      state.soul = vfx.add(g.root, 2.0, (o, age) => {
+        const t = Math.min(1, Math.max(0, (ctx.f - 90) / 80));
+        o.position.set(lerp(dx, mouth.x, t), lerp(lift, mouth.y - 1.0, t), lerp(0, mouth.z + 0.1, t));
+        o.scale.setScalar(lerp(1, 0.1, t * t));
+        o.traverse((c) => { if (c.isMesh) c.material.opacity = 0.5 * (1 - t * 0.6); });
+      });
+      audio.play('magic');
+    });
+    if (f >= 80 && f < 175) {
+      if (f % 2 === 0) { const m = worldPos(att.model.rig.head); blood.aura(lerp(dx, m.x, Math.random()), lerp(1.3, m.y, Math.random()), 0, 1, 0xa0e0ff, 0.15, 0); }
+      cam.setCine(V(lerp(ax, dx, 0.5) + 0.2, 2.0, 2.4), V(lerp(ax, dx, 0.35), 1.9, 0), 2);
+      if (f % 25 === 0) audio.play('heartbeat');
+    }
+    ctx.once('dry', 120, () => tintModel(def.model, 0x5a4a3a, 0.6));
+    ctx.once('dry2', 160, () => tintModel(def.model, 0x3a3028, 0.7));
+    ctx.once('gulp', 175, () => { audio.play('gore'); cam.shake(0.25); ctx.view.flash(0xa0e0ff, 40, 0.4, ax, 2.2, 1); });
+    ctx.once('drop', 215, () => audio.play('land', { heavy: true }));
+    ctx.once('dust', 240, () => {
+      def.model.root.visible = false;
+      blood.gore(dx, 0.9, 0, 80, DUST); blood.gore(dx, 0.5, 0, 40, ASH);
+      blood.spark(dx, 0.8, 0, 40, 0x8a7a68, 0.8);
+      audio.play('explosion');
+    });
+    if (f >= 200) cam.setCine(V(ax - dir * 0.6, 1.8, 4.2), V((ax + dx) / 2, 1.2, 0), 2);
+  },
+
+  // ---------------- BRAKKOR: Fornalha Infernal (GDD) — sopro de fogo infernal até restarem cinzas
+  fornalha_infernal(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 40 ? 'breath_w' : f < 210 ? 'breath_s' : 'winBrakkor', { speed: 5 });
+    if (att.model.rig.jaw) att.model.rig.jaw.rotation.x = f >= 40 && f < 210 ? 0.55 : 0;
+    pose(def, f < 50 ? 'dizzy' : f < 220 ? 'writhe' : 'husk', { speed: 8, tilt: f >= 50 && f < 220 ? Math.sin(f * 0.6) * 0.1 : 0 });
+    ctx.once('a', 1, () => { audio.play('fury'); ctx.view.darken(5); });
+    if (f >= 40 && f < 210) {
+      const m = worldPos(att.model.rig.head);
+      for (let i = 0; i < 4; i++) { const t = Math.random(); blood.aura(lerp(m.x + dir * 0.3, dx, t), lerp(m.y - 0.1, 1.1, t) + (Math.random() - 0.5) * 0.4 * t, (Math.random() - 0.5) * 0.4 * t, 1, i % 2 ? 0xff6010 : 0xffb030, 0.2 + t * 0.4, 0.02); }
+      if (f % 2 === 0) blood.aura(dx, 0.6 + Math.random() * 1.2, 0, 2, 0xff5010, 0.5, 0.04);
+      if (f % 12 === 0) audio.play('proj', { kind: 'fire' });
+    }
+    ctx.once('burn1', 90, () => tintModel(def.model, 0x3a1808, 0.45, 0xff3000, 0.4));
+    ctx.once('burn2', 150, () => tintModel(def.model, 0x100808, 0.6, 0xff2000, 0.7));
+    ctx.once('burn3', 200, () => tintModel(def.model, 0x050404, 0.7, 0x401000, 0.3));
+    if (f < 40) cam.setCine(V(ax - dir * 0.8, 2.6, 2.2), V(ax + dir * 0.4, 2.0, 0), 2);
+    else if (f < 140) cam.setCine(V(lerp(ax, dx, 0.5), 1.5, 3.4), V(lerp(ax, dx, 0.5), 1.5, 0), 2);
+    else if (f < 225) cam.setCine(V(dx + dir * 1.2, 1.2, 2.2), V(dx, 1.1, 0), 2);
+    ctx.once('ash', 240, () => {
+      def.model.root.visible = false;
+      blood.gore(dx, 1.0, 0, 90, ASH); blood.spark(dx, 1.0, 0, 50, 0xff6010, 1.0);
+      audio.play('explosion'); cam.shake(0.3);
+      const sk = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd0c4a8, roughness: 0.6 }));
+      sk.position.set(dx, 0.12, 0.1); vfx.add(sk, 3, null);
+    });
+    if (f >= 225) cam.setCine(V(ax - dir * 0.5, 1.9, 4.0), V((ax + dx) / 2, 1.1, 0), 2);
+  },
+
+  // ---------------- BRAKKOR: Esmagamento Sísmico (nome proposto) — salta e esmaga; rochas emergem do chão
+  esmagamento_sismico(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    const jt = Math.max(0, Math.min(1, (f - 40) / 50));
+    pose(att, f < 40 ? 'leap_w' : f < 95 ? 'leap_s' : f < 200 ? 'groundSlam_s' : 'winBrakkor', { speed: 8, lift: f >= 40 && f < 95 ? Math.sin(jt * Math.PI) * 3.0 : 0, zoff: 0 });
+    pose(def, f < 92 ? 'dizzy' : 'lying', f >= 92 ? { lie: 1, speed: 30 } : { speed: 6 });
+    if (f < 40) cam.setCine(V(ax - dir * 1.2, 1.0, 3.4), V(ax, 1.4, 0), 2);
+    else if (f < 92) cam.setCine(V(dx + dir * 2.0, 0.6, 3.2), V(lerp(ax, dx, jt), 2.4, 0), 3);
+    ctx.once('jump', 40, () => audio.play('jump'));
+    ctx.once('slam', 92, () => {
+      def.model.root.scale.set(1.25, 0.25, 1.25);
+      blood.burst(dx, 0.3, 0, dir, 160, 2.0); blood.burst(dx, 0.3, 0, -dir, 120, 1.8); blood.gore(dx, 0.3, 0, 60, FLESH);
+      blood.spark(dx, 0.1, 0, 60, 0xff9040, 2.0);
+      audio.play('explosion'); audio.play('gore'); audio.play('land', { heavy: true });
+      cam.shake(0.8); ctx.hud.flash(0.5);
+      blood.pool(dx, 0.1, 2.4);
+    });
+    ctx.once('rocks', 130, () => {
+      const g = new THREE.Group(); const mat = new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 1, emissive: 0x401000 });
+      for (let i = 0; i < 9; i++) { const r = new THREE.Mesh(new THREE.ConeGeometry(0.2 + Math.random() * 0.15, 1.2 + Math.random() * 0.8, 5), mat); const a = (i / 9) * Math.PI * 2; r.position.set(Math.cos(a) * 0.7, -1, Math.sin(a) * 0.6); r.rotation.set(Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3); g.add(r); }
+      g.position.set(dx, 0, 0);
+      vfx.add(g, 4, (o, age) => o.children.forEach((r) => { r.position.y = lerp(-1, 0.4, age * 4); }));
+      audio.play('land', { heavy: true }); cam.shake(0.5);
+    });
+    if (f >= 92) cam.setCine(V(dx + Math.sin(f * 0.01) * 2.8, 2.2, 3.4), V(dx, 0.4, 0), 2);
+  },
+
+  // ---------------- BRAKKOR: Rasgo Duplo (nome proposto) — ergue o oponente e arranca os dois braços
+  rasgo_duplo(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 30 ? 'grab_w' : f < 140 ? 'grab_s' : f < 200 ? 'roar_s' : f < 230 ? 'groundSlam_s' : 'winBrakkor', { speed: 6 });
+    pose(def, f < 140 ? 'crucified' : f < 215 ? 'dangle' : 'lying', f >= 215 ? { lie: 1, speed: 6 } : { lift: f < 30 ? 0 : Math.min(0.7, (f - 30) * 0.02), speed: 6, tilt: Math.sin(f * 0.8) * (f > 90 ? 0.08 : 0.02) });
+    ctx.once('a', 1, () => { audio.play('throw'); ctx.view.darken(4); });
+    if (f < 140) cam.setCine(V((ax + dx) / 2, 1.8, 2.8 - f * 0.005), V(dx, 1.8, 0), 2);
+    for (const t of [70, 100, 125]) ctx.once('hb' + t, t, () => { audio.play('heartbeat'); blood.burst(dx + 0.35, 1.9, 0, 1, 10, 0.4); blood.burst(dx - 0.35, 1.9, 0, -1, 10, 0.4); });
+    ctx.once('rip', 140, () => {
+      for (const [s, sg] of [[def.model.rig.shA, 1], [def.model.rig.shB, -1]]) {
+        const wp = worldPos(s);
+        vfx.detach(s, V(sg * 0.07, 0.08, 0.04), V(0.1, 0.2, sg * 0.3), { restY: 0.1, trail: (q, age, rest) => { if (!rest) blood.drip(q.x, q.y, q.z); } });
+        blood.burst(wp.x, wp.y, wp.z, sg, 100, 1.6);
+      }
+      blood.gore(dx, 1.9, 0, 40, FLESH);
+      audio.play('gore'); audio.play('hit', { heavy: true }); cam.shake(0.6); ctx.hud.flash(0.4);
+      state.rip = true;
+    });
+    if (state.rip && f < 215) { blood.fountain(dx + 0.25, 2.0, 0, 0.4, 1, 1, 0.9); blood.fountain(dx - 0.25, 2.0, 0, -0.4, 1, 1, 0.9); }
+    if (f >= 140 && f < 215) cam.setCine(V(dx + dir * 1.5, 1.6, 3.0), V(dx, 1.6, 0), 3);
+    ctx.once('slam', 215, () => { audio.play('land', { heavy: true }); audio.play('gore'); cam.shake(0.6); blood.burst(dx, 0.3, 0, dir, 80, 1.4); blood.pool(dx, 0.1, 2.0); });
+    if (f >= 215) cam.setCine(V(ax - dir * 0.6, 2.0, 4.4), V((ax + dx) / 2, 1.2, 0), 2);
+  },
+});
+// id de personagem de um lutador embrulhado (para fantasmas do derrotado)
+function CHAR_OF(w) { return w.model.charId; }
+
+Object.assign(SUPERS, {
+  // ---------------- KAZURO: Tempestade de Lâminas (nome proposto)
+  tempestade(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio } = ctx;
+    const dx = def.x, mid = (att.x + dx) / 2;
+    const hits = [24, 36, 48, 60, 72];
+    const near = hits.some((h) => f >= h - 2 && f <= h + 2);
+    att.model.root.visible = !(f >= 18 && f < 108);
+    pose(att, f < 108 ? 'dashSlash_s' : f < 125 ? 'iai_s' : 'sheathe', { speed: 20 });
+    pose(def, f < 118 ? (near ? 'hitHigh' : 'frozen') : 'tumble', { speed: 30, lift: f >= 118 ? 0.4 : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); ctx.hud.flash(0.4); ctx.view.darken(2.4); });
+    hits.forEach((h, i) => ctx.once('h' + i, h, () => {
+      slashArc(vfx, dx, 1.0 + (i % 3) * 0.3, 0.05, [i * 0.9, i * 1.3, i * 0.6], SPECTRAL, 0.8);
+      const a = i * 2.1; afterimage(vfx, 'kazuro', SPECTRAL, 'dashSlash_s', dx + Math.cos(a) * 1.1, Math.sin(a) * 0.7, dx, 0.35);
+      blood.burst(dx, 1.0 + Math.random() * 0.6, 0, i % 2 ? dir : -dir, 30, 1.0); audio.play('hit', { slash: true });
+    }));
+    ctx.once('final', 112, () => { for (const r of [0.8, -0.8]) slashArc(vfx, dx, 1.2, 0.1, [0, 0, r], 0xc0d8ff, 1.3, 0.6); });
+    ctx.once('boom', 118, () => { cam.shake(0.5); ctx.hud.flash(); blood.burst(dx, 1.2, 0, dir, 120, 1.6); audio.play('explosion'); ctx.view.flash(0x80b0ff, 30, 0.6, dx, 1.4, 1); blood.pool(dx, 0.2, 1.0); });
+    const ang = f * 0.035;
+    cam.setCine(V(dx + Math.sin(ang) * 3.0 * dir, 1.4, Math.cos(ang) * 3.0), V(f > 108 ? mid : dx, 1.2, 0), f > 108 ? 5 : 3);
+  },
+  // ---------------- KAZURO: Despertar do Oni (nome proposto) — a entidade gigante corta três vezes
+  despertar(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'roar_w' : 'roar_s', { speed: 6 });
+    const hit = [46, 70, 94, 140].some((h) => f >= h && f < h + 6);
+    pose(def, f < 140 ? (hit ? 'hitHigh' : 'dizzy') : 'tumble', { speed: 24, lift: f >= 140 ? 0.4 : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); audio.play('fury'); ctx.hud.flash(0.3); ctx.view.darken(2.8); });
+    ctx.once('oni', 20, () => {
+      const g = ghostOf('kazuro', 0x3050ff); g.root.scale.setScalar(2.2);
+      g.root.position.set(ax - dir * 0.6, 0, -0.6); g.root.lookAt(dx, 0, -0.6);
+      state.oni = g;
+      vfx.add(g.root, 2.4, (o, age) => {
+        const k = ctx.f;
+        const ph = [46, 70, 94, 140].findIndex((h) => k < h);
+        const local = ph < 0 ? 99 : k - (ph ? [46, 70, 94, 140][ph - 1] : 20);
+        applyPose(g, POSES[ph < 0 ? 'iai_s' : local < 14 ? 'katana_w' : 'katana_s'], {});
+        o.traverse((c) => { if (c.isMesh) c.material.opacity = 0.45 * Math.min(1, age * 3) * (k > 150 ? Math.max(0, 1 - (k - 150) / 12) : 1); });
+      });
+    });
+    [46, 70, 94].forEach((h, i) => ctx.once('h' + i, h, () => { slashArc(vfx, dx, 1.3, 0.05, [0.3, 0.2, i % 2 ? 0.9 : -0.9], 0x4070ff, 1.4, 0.5); blood.burst(dx, 1.2, 0, dir, 50, 1.2); audio.play('heavyWhoosh'); cam.shake(0.3); }));
+    ctx.once('final', 140, () => { slashArc(vfx, dx, 1.2, 0.05, [0, 0, 0], 0xc0d8ff, 2.0, 0.7); cam.shake(0.6); ctx.hud.flash(); blood.burst(dx, 1.2, 0, dir, 130, 1.8); audio.play('explosion'); ctx.view.flash(0x4070ff, 40, 0.7, dx, 1.5, 1); blood.pool(dx, 0.2, 1.1); });
+    if (f % 3 === 0) blood.aura(ax, 1.2, 0, 2, 0x4070ff, 0.8, 0.03);
+    cam.setCine(V(mid - Math.sin(f * 0.015) * 3.6 * dir, 1.8 + f * 0.004, 4.0), V(mid, 1.6, 0), 3);
+  },
+  // ---------------- BRAKKOR: Apocalipse Ígneo (nome proposto) — rugido invoca meteoros e um pilar de fogo
+  apocalipse(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'roar_w' : 'roar_s', { speed: 6 });
+    const hits = [36, 60, 84];
+    pose(def, f < 126 ? (hits.some((h) => f >= h && f < h + 8) ? 'hitHigh' : 'dizzy') : 'tumble', { speed: 24, lift: f >= 126 ? Math.min(1.2, (f - 126) * 0.05) : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); audio.play('fury'); ctx.hud.flash(0.3); ctx.view.darken(2.6); cam.shake(0.3); });
+    hits.forEach((h, i) => ctx.once('m' + i, h - 16, () => {
+      const m = new THREE.Group();
+      m.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 1), new THREE.MeshStandardMaterial({ color: 0x200800, emissive: 0xff5010, emissiveIntensity: 1.8 })));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite('#ff6010'), blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.set(2, 2, 1); m.add(s);
+      const from = V(dx - dir * (2 - i), 7, -0.5 + i * 0.3), to = V(dx, 1.0, 0);
+      vfx.add(m, 16 / 60, (o, age) => { o.position.lerpVectors(from, to, Math.min(1, age * 60 / 16)); blood.aura(o.position.x, o.position.y, o.position.z, 2, 0xff6010, 0.2, 0.02); });
+      ctx.once('mh' + i, h, () => { blood.spark(dx, 1.0, 0, 40, 0xff8030, 1.8); blood.burst(dx, 1.1, 0, dir, 30, 1); audio.play('explosion'); cam.shake(0.35); ctx.view.flash(0xff6010, 30, 0.3, dx, 1.2, 1); });
+    }));
+    ctx.once('pillar', 120, () => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 8, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xff5010, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      p.position.set(dx, 4, 0);
+      vfx.add(p, 0.6, (o, age) => { o.scale.set(1 + age, Math.min(1, age * 6), 1 + age); o.material.opacity = 0.75 * (1 - age / 0.6); });
+      audio.play('explosion');
+    });
+    ctx.once('boom', 126, () => { cam.shake(0.7); ctx.hud.flash(); blood.burst(dx, 1.2, 0, dir, 100, 1.6); ctx.view.flash(0xff5010, 60, 0.7, dx, 1.5, 1); });
+    if (f >= 120 && f < 150) blood.aura(dx, 0.3 + Math.random() * 3, 0, 4, 0xffa030, 0.6, 0.06);
+    cam.setCine(V(mid + Math.sin(f * 0.02) * 3.8 * dir, 1.2 + f * 0.01, 4.4), V(mid, 1.6, 0), 3);
+  },
+  // ---------------- BRAKKOR: Banquete do Devorador (nome proposto) — agarra, morde duas vezes e arremessa
+  banquete(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 40 ? 'grab_s' : f < 130 ? 'devour' : f < 150 ? 'throwAxe_s' : 'roar_s', { speed: 8 });
+    const bitten = [50, 80].some((h) => f >= h && f < h + 8);
+    pose(def, f < 140 ? (bitten ? 'writhe' : 'dangle') : 'tumble', { lift: f < 140 ? Math.min(0.8, f * 0.02) : Math.max(0, 0.8 - (f - 140) * 0.05), speed: 12 });
+    if (att.model.rig.jaw) att.model.rig.jaw.rotation.x = f >= 40 && f < 130 ? (bitten ? 0.1 : 0.55) : 0;
+    ctx.once('fx', 1, () => { audio.play('super'); audio.play('throw'); ctx.hud.flash(0.3); ctx.view.darken(2.6); });
+    [50, 80].forEach((h, i) => ctx.once('b' + i, h, () => { const p = worldPos(def.model.rig.neck); blood.burst(p.x, p.y, p.z, -dir, 70, 1.3); blood.gore(p.x, p.y, p.z, 10, FLESH); audio.play('gore'); cam.shake(0.3); }));
+    ctx.once('heal', 90, () => blood.aura(ax, 1.4, 0, 40, 0xff4060, 1.0, 0.03));
+    ctx.once('throw', 135, () => audio.play('heavyWhoosh'));
+    ctx.once('slam', 140, () => { cam.shake(0.7); ctx.hud.flash(); blood.burst(dx, 0.4, 0, dir, 110, 1.6); audio.play('land', { heavy: true }); audio.play('explosion'); blood.pool(dx, 0.2, 1.2); });
+    if (f < 130) cam.setCine(V((ax + dx) / 2 + dir * 0.3, 2.0, 2.6), V((ax + dx) / 2, 1.8, 0), 2);
+    else cam.setCine(V(dx + dir * 2, 1.2, 3.6), V(dx, 0.6, 0), 3);
+  },
+});

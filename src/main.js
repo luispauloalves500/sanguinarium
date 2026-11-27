@@ -1,4 +1,5 @@
 // Fluxo do jogo: menus -> seleção -> luta -> resultados. Loop fixo de 60 Hz com renderização independente.
+import { setKeyBindings } from './ui/keylabels.js';
 import { Match } from './combat/match.js';
 import { CHARACTERS } from './combat/moves.js';
 import { CpuController } from './ai/cpu.js';
@@ -11,7 +12,7 @@ import { Screens } from './ui/screens.js';
 import { PerfGovernor } from './render/perf.js';
 import { buildLadder, ENDINGS } from './modes/arcade.js';
 
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';
 
 const SIM_DT = 1 / 60;
 const params = new URLSearchParams(location.search);
@@ -26,6 +27,7 @@ class App {
     this.audio = new AudioSystem();
     this.applyAudio();
     this.devices = new InputDevices();
+    { const dev = this.devices, sb = dev.setBindings.bind(dev); dev.setBindings = (b) => { sb(b); setKeyBindings(dev.getBindings()); }; }
     if (this.settings.keymap1) { try { this.devices.setBindings(JSON.parse(this.settings.keymap1)); } catch (e) { /* mapa inválido: padrão */ } }
     this.hud = new Hud();
     this.hud.reduceFlash = this.settings.reduceFlash === '1';
@@ -210,7 +212,7 @@ class App {
       } else {
         const sc = this.screens;
         const ids = sc.cur === 'select' || sc.cur === 'arena' ? sc.sel.map((i) => Object.keys(CHARACTERS)[i]) : ['varkhan', 'lilith'];
-        const poses = sc.cur === 'select' || sc.cur === 'arena' ? sc.ready.map((r, i) => (r ? (ids[i] === 'varkhan' ? 'winVarkhan' : 'winLilith') : 'stance')) : ['stance', 'stance'];
+        const poses = sc.cur === 'select' || sc.cur === 'arena' ? sc.ready.map((r, i) => (r ? (CHARACTERS[ids[i]].winPose || 'winVarkhan') : 'stance')) : ['stance', 'stance'];
         this.view.showroom(ids, dt, poses);
       }
     } catch (e) {

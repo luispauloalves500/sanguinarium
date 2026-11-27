@@ -114,8 +114,10 @@ export class CpuController {
         return;
       }
       if (proj && r() < 0.3) { this.push(BTN.up | BTN.right, 2); this.push(0, 30); return; }
+      if (opAtk && prof.counter && r() < 0.05 * this.d) { this.special(me, prof.counter); return; }
     }
     // antiaéreo
+    if (op.airborne && op.vy < 0.08 && dist < 2.4 && prof.antiAir && r() < this.p('antiAir') * 0.5) { this.special(me, prof.antiAir); return; }
     if (op.airborne && op.vy < 0.08 && dist < 2.4 && r() < this.p('antiAir')) {
       this.push(BTN.down, 3); this.push(BTN.down | BTN.hp, 1); this.push(BTN.down, 6); return;
     }
@@ -129,22 +131,23 @@ export class CpuController {
     const it = this.d >= 1 ? interactionFor(match.stage, me) : null;
     if (it && ((it.kind === 'vault' && dist < 2.4) || (it.kind === 'statue' && dist < 3.2 && !op.blocking)) && r() < 0.3) { this.push(BTN.up | BTN.grab, 2); this.push(0, 8); return; }
     // supergolpe
-    if (me.meter >= 200 && dist < (me.charId === 'varkhan' ? 2.6 : 2.2) && r() < 0.35) { const alt = r() < 0.5; if (alt) this.push(BTN.down, 2); this.push(BTN.lk | BTN.hk | (alt ? BTN.down : 0), 1); this.push(0, 3); return; }
+    if (me.meter >= 200 && dist < (me.ch.superRange || 2.4) && r() < 0.35) { const alt = r() < 0.5; if (alt) this.push(BTN.down, 2); this.push(BTN.lk | BTN.hk | (alt ? BTN.down : 0), 1); this.push(0, 3); return; }
     // fúria
     if (me.fury >= 100 && !me.furyActive && r() < 0.5) { this.push(BTN.block | BTN.grab, 1); this.push(0, 3); return; }
     if (me.charId === 'lilith' && me.hp < 450 && me.regenUses > 0 && dist > 3.5 && r() < 0.4) { this.special(me, 'regen'); return; }
     if (dist < 1.1 && (op.blocking || op.state === 'blockstun') && r() < 0.45) { this.push(BTN.grab, 1); this.push(0, 4); return; }
+    if (prof.grabs && dist < 1.3 && r() < ((op.blocking || op.state === 'blockstun') ? 0.12 + 0.06 * this.d : 0.12)) { this.special(me, r.pick(prof.grabs)); return; }
     if (dist < 1.5) {
       const roll = r();
       if (roll < 0.62) this.combo(me);
       else if (roll < 0.72) { this.push(BTN.down | BTN.hk, 1); this.push(BTN.down, 10); }
       else if (roll < 0.8) { this.push(BTN.grab, 1); this.push(0, 4); }
       else if (roll < 0.9) { this.push(BTN.left, 14); }
-      else this.special(me, r.pick(prof.specials.slice(1, 6)));
+      else this.special(me, r.pick(prof.close || prof.specials.slice(1, 6)));
       return;
     }
     if (r() < this.p('special') * prof.zoning && dist > 2.0) {
-      const longRange = prof.specials.filter((id) => ['machado', 'lanca', 'ruptura', 'chuva', 'prisao', 'clone', 'corrente', 'passo', 'garra', 'espinhos', 'teleporte'].includes(id));
+      const longRange = prof.long || prof.specials.filter((id) => ['machado', 'lanca', 'ruptura', 'chuva', 'prisao', 'clone', 'corrente', 'passo', 'garra', 'espinhos', 'teleporte'].includes(id));
       let pick = r.pick(longRange);
       if (pick === 'corrente' && dist > 3.4) pick = 'machado';
       if (pick === 'garra' && dist > 2.6) pick = 'lanca';
