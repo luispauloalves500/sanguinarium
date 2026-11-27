@@ -12,12 +12,12 @@ import { Screens } from './ui/screens.js';
 import { PerfGovernor } from './render/perf.js';
 import { buildLadder, ENDINGS } from './modes/arcade.js';
 
-export const VERSION = '0.3.0';
+export const VERSION = '0.4.0';
 
 const SIM_DT = 1 / 60;
 const params = new URLSearchParams(location.search);
 const isTouch = ('ontouchstart' in window || navigator.maxTouchPoints > 0) && matchMedia('(pointer: coarse)').matches;
-const DEFAULTS = { vol_master: 0.8, vol_music: 0.45, vol_sfx: 0.9, vol_voice: 0.8, bloodLevel: '1', bloodPersist: '1', quality: 'auto', showFps: '0', reduceShake: '0', reduceFlash: '0', touchMode: 'auto', touchAlpha: '0', difficulty: 1, hazards: '1', keymap1: '' };
+const DEFAULTS = { vol_master: 0.8, vol_music: 0.45, vol_sfx: 0.9, vol_voice: 0.8, bloodLevel: '1', bloodPersist: '1', quality: 'auto', showFps: '0', reduceShake: '0', reduceFlash: '0', touchMode: 'auto', touchAlpha: '0', difficulty: 1, hazards: '1', keymap1: '', keymap2: '', padmap1: '', padmap2: '' };
 
 class App {
   constructor() {
@@ -27,8 +27,9 @@ class App {
     this.audio = new AudioSystem();
     this.applyAudio();
     this.devices = new InputDevices();
-    { const dev = this.devices, sb = dev.setBindings.bind(dev); dev.setBindings = (b) => { sb(b); setKeyBindings(dev.getBindings()); }; }
-    if (this.settings.keymap1) { try { this.devices.setBindings(JSON.parse(this.settings.keymap1)); } catch (e) { /* mapa inválido: padrão */ } }
+    { const dev = this.devices, sb = dev.setBindings.bind(dev); dev.setBindings = (b, p = 0) => { sb(b, p); setKeyBindings(dev.getBindings(0), dev.getBindings(1)); }; }
+    for (const [k, p] of [['keymap1', 0], ['keymap2', 1]]) if (this.settings[k]) { try { this.devices.setBindings(JSON.parse(this.settings[k]), p); } catch (e) { /* mapa inválido: padrão */ } }
+    for (const [k, p] of [['padmap1', 0], ['padmap2', 1]]) if (this.settings[k]) { try { this.devices.setPad(JSON.parse(this.settings[k]), p); } catch (e) { /* mapa inválido: padrão */ } }
     this.hud = new Hud();
     this.hud.reduceFlash = this.settings.reduceFlash === '1';
     this.bloodOpts = { intensity: +this.settings.bloodLevel, persist: this.settings.bloodPersist === '1' };

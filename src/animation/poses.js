@@ -71,6 +71,10 @@ export const POSES = {
   breath_w: P({ spx: -0.35, nx: -0.6, aAx: -0.4, aAz: 0.8, aBx: -0.4, aBz: -0.8, eA: -1.0, eB: -1.0 }), breath_s: P({ spx: 0.4, nx: 0.25, aAx: -0.6, aAz: 0.9, aBx: -0.6, aBz: -0.9, eA: -1.2, eB: -1.2, lAx: -0.7, kA: 0.8, lBx: 0.5, kB: 0.3 }),
   leap_w: P({ ...CROUCH, aAx: -2.9, aBx: -2.9, eA: -0.5, eB: -0.5, spx: 0.1 }), leap_s: P({ ...CROUCH, aAx: -0.5, aBx: -0.5, eA: 0, eB: 0, spx: 0.9, kA: 1.6, kB: 1.4 }),
   winKazuro: P({ aBx: -1.6, aBz: 0.9, eB: -1.2, aAx: -0.2, aAz: 0.2, eA: -0.3, spy: 0.25, nx: 0.1, spx: 0.05, lAx: -0.15, kA: 0.15, lBx: 0.15, kB: 0.1 }),
+  // v0.4 — Nymera / Pestilus
+  slide_w: P({ ...CROUCH, spx: 0.3, aAx: -0.8, aBx: -0.6 }), slide_s: P({ py: -0.55, spx: -0.55, nx: 0.3, lAx: -1.45, kA: 0.1, lBx: -0.4, kB: 1.4, aAx: -0.9, eA: -0.4, aBx: 0.6, eB: -0.3 }),
+  winNymera: P({ aAx: -2.2, aAz: 0.5, eA: -0.9, aBx: -0.5, aBz: -0.6, eB: -0.4, spy: 0.35, nx: 0.25, spx: -0.05, lAx: -0.05, kA: 0.1, lBx: 0.25, lBz: -0.1, kB: 0.35 }),
+  winPestilus: P({ aAx: -1.4, aAz: 0.3, eA: -1.9, aBx: -0.4, aBz: -0.3, eB: -1.6, spx: 0.35, nx: 0.45, spy: -0.25, lAx: -0.2, kA: 0.3, lBx: 0.2, kB: 0.25 }),
   winBrakkor: P({ aAx: -2.6, aAz: 0.9, eA: -0.6, aBx: -2.6, aBz: -0.9, eB: -0.6, nx: -0.7, spx: -0.4, lAx: -0.5, lAz: 0.25, kA: 0.6, lBx: 0.4, lBz: -0.25, kB: 0.5 }),
   devour: P({ aAx: -2.0, eA: -1.6, aBx: -1.6, eB: -0.8, spx: 0.5, nx: 0.6, lAx: -0.6, kA: 0.7 }),
   sheathe: P({ aBx: -0.3, aBz: 0.8, eB: -1.8, aAx: -0.2, aAz: 0.5, eA: -1.6, spy: 0.1, nx: 0.2, spx: 0.1 }),

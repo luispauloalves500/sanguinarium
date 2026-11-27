@@ -15,8 +15,11 @@ export class CameraRig {
   setCine(pos, look, speed = 4) {
     if (!this.cine) this.cine = { pos: new THREE.Vector3(), look: new THREE.Vector3(), speed };
     // afasta a câmera proporcionalmente (mais em telas retrato)
-    const k = this.camera.aspect < 1 ? 1.9 : 1.3;
-    this.cine.pos.copy(look).addScaledVector(pos.clone().sub(look), k); this.cine.look.copy(look); this.cine.speed = speed;
+    // v0.4: com lutador alto (Brakkor) na cinemática, planos fechados afastam e miram mais alto para a cabeça caber
+    const t = this.cineTall || 0;
+    const k = (this.camera.aspect < 1 ? 1.9 : 1.3) * (1 + t * 0.9);
+    const lk = t ? look.clone().setY(look.y + t * 0.55) : look;
+    this.cine.pos.copy(lk).addScaledVector(pos.clone().sub(look), k); this.cine.look.copy(lk); this.cine.speed = speed;
   }
   clearCine() { this.cine = null; }
   update(fighters, dt, mode = 'fight', time = 0) {

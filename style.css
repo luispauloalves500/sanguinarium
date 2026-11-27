@@ -84,11 +84,11 @@ body.touch .pause-btn { display: block; }
 .pick { width: 33%; max-width: 360px; background: rgba(10,0,2,.7); border: 2px solid #5a3a1a; padding: 14px; }
 .pick.ready { border-color: var(--red2); box-shadow: 0 0 20px rgba(255,30,40,.5); }
 .pick h4 { margin: 0 0 8px; letter-spacing: 3px; color: var(--gold); font-size: 14px; }
-.pick .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-@media (max-width: 900px) { .pick .cards { grid-template-columns: repeat(2, 1fr); } }
+.pick .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+@media (max-width: 900px) { .pick .cards { grid-template-columns: repeat(3, 1fr); } }
 .card { min-width: 0; padding: 8px 2px; border: 2px solid #3a2a1a; background: linear-gradient(#200206, #0a0002); cursor: pointer; text-align: center; }
 .card.sel { border-color: var(--red2); box-shadow: 0 0 14px rgba(255,40,40,.5) inset; }
-.card .emb { font-size: 34px; color: var(--gold); }
+.card .emb { font-size: 26px; color: var(--gold); }
 .card .nm { font-weight: bold; letter-spacing: 2px; }
 .card .tt { font-size: 11px; color: #c99; line-height: 1.2; }
 .card .nm { font-size: 10px; letter-spacing: 0; overflow-wrap: anywhere; }
@@ -151,6 +151,8 @@ body.touch .pause-btn { display: block; }
 
 .opt-sub { margin: 14px 0 6px; font-size: 13px; letter-spacing: 3px; color: #d88; text-align: center; }
 .keymap button { min-width: 120px; }
+#keymapWho button.on { border-color: var(--red2); color: #fff; }
+.km-note { font-size: 12px; color: #c99; margin: 4px 0 6px; min-height: 1em; }
 .keymap button.wait { color: #ffd070; border-color: #ffd070; animation: blink 1s infinite; }
 .ending p { font-size: 17px; line-height: 1.6; max-width: 640px; margin: 10px auto; }
 .ending .sig { color: #c88; font-size: 13px; letter-spacing: 2px; }

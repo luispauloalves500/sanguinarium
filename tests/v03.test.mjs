@@ -7,12 +7,12 @@ import { CpuController } from '../src/ai/cpu.js';
 import * as C from '../src/core/constants.js';
 
 const R = BTN.right, L = BTN.left, D = BTN.down;
-const IDS = ['varkhan', 'lilith', 'kazuro', 'brakkor'];
+const IDS = ['varkhan', 'lilith', 'kazuro', 'brakkor', 'nymera', 'pestilus'];
 function ready(p1, p2) { const m = new Match({ p1, p2 }); while (m.phase !== 'fight') m.step([0, 0]); return m; }
 const QCF = (b) => [D, D | R, R | b], QCB = (b) => [D, D | L, L | b], DD = (b) => [D, 0, D | b], BF = (b) => [L, R | b];
 function input(m, who, list, n) { for (let i = 0; i < n; i++) m.step(who === 0 ? [list[i] ?? 0, 0] : [0, list[i] ?? 0]); }
 
-test('4 lutadores com dados completos: especiais, 2 supers, transformação, 4 fatalidades com timeline, AI, pose de vitória', async () => {
+test('6 lutadores com dados completos: especiais, 2 supers, transformação, 4 fatalidades com timeline, AI, pose de vitória', async () => {
   const { FATALITIES, SUPERS } = await import('../src/fatalities/timelines.js').catch(() => ({ FATALITIES: null, SUPERS: null }));
   assert.deepEqual(Object.keys(CHARACTERS), IDS);
   for (const ch of Object.values(CHARACTERS)) {
@@ -128,7 +128,7 @@ function toFinish(p1, p2) {
   while (m.phase !== 'finish') m.step([0, 0]);
   return m;
 }
-for (const id of ['kazuro', 'brakkor']) {
+for (const id of ['kazuro', 'brakkor', 'nymera', 'pestilus']) {
   test(`${id}: as 4 fatalidades saem pelo comando completo e pelo atalho ESP+direção`, () => {
     for (const fat of CHARACTERS[id].fatalities) {
       // comando completo
@@ -152,12 +152,13 @@ for (const id of ['kazuro', 'brakkor']) {
   });
 }
 
-test('CPU vs CPU: todos os 16 confrontos terminam; nenhum lutador domina (taxa de vitória 25–75%)', () => {
+test('CPU vs CPU: todos os 36 confrontos terminam; nenhum lutador domina (taxa de vitória 25–75%)', () => {
   const wins = Object.fromEntries(IDS.map((i) => [i, [0, 0]]));
   let n0 = 0;
-  for (let s = 0; s < 64; s++) {
-    const p1 = IDS[s % 4], p2 = IDS[(s >> 2) % 4];
-    const m = new Match({ p1, p2, arena: s % 2 ? 'catedral' : 'coliseu' });
+  const N = IDS.length * IDS.length * 2;
+  for (let s = 0; s < N; s++) {
+    const p1 = IDS[s % IDS.length], p2 = IDS[Math.floor(s / IDS.length) % IDS.length];
+    const m = new Match({ p1, p2, arena: ['coliseu', 'catedral', 'templo', 'forja'][s % 4] });
     const a = new CpuController(0, 2, s * 7 + 1), b = new CpuController(1, 2, s * 31 + 5);
     let n = 0;
     while (m.phase !== 'matchEnd' && n < 60 * 60 * 12) { m.step([a.next(m), b.next(m)]); n++; }
@@ -170,7 +171,7 @@ test('CPU vs CPU: todos os 16 confrontos terminam; nenhum lutador domina (taxa d
     wins[w === 0 ? p1 : p2][0]++;
   }
   const rates = Object.fromEntries(Object.entries(wins).map(([k, [w, t]]) => [k, +(w / t).toFixed(2)]));
-  console.log('# taxa de vitória CPU x CPU (dif. 2, 48 partidas não-espelho):', JSON.stringify(rates), 'quadros médios', Math.round(n0 / 64));
+  console.log('# taxa de vitória CPU x CPU (dif. 2, 60 partidas não-espelho):', JSON.stringify(rates), 'quadros médios', Math.round(n0 / N));
   for (const [k, r] of Object.entries(rates)) assert.ok(r >= 0.25 && r <= 0.75, `${k} ${r}`);
 });
 

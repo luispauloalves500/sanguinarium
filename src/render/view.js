@@ -17,6 +17,9 @@ function glowMat(color) {
   return GLOW[color];
 }
 
+const GTEX = {};
+const glowTex = (c) => GTEX[c] || (GTEX[c] = glowSprite(c));
+
 export class GameView {
   constructor(canvas, settings, audio, hud) {
     this.settings = settings; this.audio = audio; this.hud = hud;
@@ -154,6 +157,8 @@ export class GameView {
         case 'armor': B.spark(e.x, e.y, 0.2, 18, 0xffc060, 1.6); A.play('block'); this.hud.message('SUPERARMADURA', 'small', 30); cam.shake(0.12); break;
         case 'quake': cam.shake(0.45); A.play('land', { heavy: true }); B.spark(e.x, 0.1, 0.2, 30, 0xff8040, 1.8); break;
         case 'freeze': A.play('freeze'); break;
+        case 'poison': { const f = match.fighters[e.who]; B.aura(f.x, 1.2, 0, 6, 0x70ff30, 0.4, 0.02); if (e.left < 16) B.spark(f.x, 1.2, 0.2, 6, 0x70ff30, 0.5); break; }
+        case 'burst': B.spark(e.x, 0.15, 0.2, 30, 0x70ff30, 1.4); A.play('explosion'); cam.shake(0.15); break;
         case 'pull': A.play('chain'); break;
         case 'jump': A.play('jump'); break;
         case 'dodge': A.play('whoosh'); break;
@@ -212,6 +217,7 @@ export class GameView {
     const fn = c.kind === 'fatal' ? FATALITIES[c.id] : SUPERS[c.id];
     if (!fn) return false;
     const att = this.vf[src.att], def = this.vf[src.def];
+    this.cam.cineTall = Math.max(0, Math.max(match.fighters[src.att].ch.height || 1.9, match.fighters[src.def].ch.height || 1.9) - 2.0);
     const ctx = {
       f: src.f, att: this.wrap(att), def: this.wrap(def), dir: match.fighters[src.att].facing, cam: this.cam, blood: this.blood, vfx: this.vfx,
       audio: this.audio, hud: this.hud, view: this, state: c.state,
@@ -305,8 +311,21 @@ export class GameView {
         for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 6, 18), mat); t.rotation.x = Math.PI / 2; t.position.y = 0.6 + i * 0.45; v.prison.add(t); }
         this.scene.add(v.prison);
       }
-      v.prison.visible = true; v.prison.position.set(f.x, 0, 0); v.prison.rotation.y += dt * 2;
-    } else if (v.prison) v.prison.visible = false;
+      const ice = !!f.frozenIce;
+      if (ice && !v.iceBlock) {
+        // v0.4: congelamento da Nymera — bloco de gelo em vez das correntes
+        v.iceBlock = new THREE.Group();
+        const im = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x2a6a9a, emissiveIntensity: 0.5, roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.5, depthWrite: false });
+        const bx = new THREE.Mesh(new THREE.BoxGeometry(0.95, f.ch.height + 0.2, 0.8), im); bx.position.y = (f.ch.height + 0.2) / 2; v.iceBlock.add(bx);
+        const ed = new THREE.LineSegments(new THREE.EdgesGeometry(bx.geometry), new THREE.LineBasicMaterial({ color: 0xe8faff, transparent: true, opacity: 0.8 })); ed.position.copy(bx.position); v.iceBlock.add(ed);
+        for (let i = 0; i < 5; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.5, 5), im); c.position.set((i - 2) * 0.2, f.ch.height + 0.3, (Math.random() - 0.5) * 0.5); c.rotation.z = (i - 2) * 0.2; v.iceBlock.add(c); }
+        this.scene.add(v.iceBlock);
+      }
+      if (v.iceBlock) { v.iceBlock.visible = ice; v.iceBlock.position.set(f.x, 0, 0); }
+      v.prison.visible = !ice; v.prison.position.set(f.x, 0, 0); v.prison.rotation.y += dt * 2;
+    } else { if (v.prison) v.prison.visible = false; if (v.iceBlock) v.iceBlock.visible = false; }
+    // veneno: bolhas verdes
+    if (f.poison > 0 && Math.random() < 0.25) this.blood.aura(f.x + (Math.random() - 0.5) * 0.4, 0.6 + Math.random() * 1.0, 0, 1, 0x70ff30, 0.2, 0.02);
     // aura do Véu Escarlate / regeneração
     if (f.move && (f.move.id === 'veu' || f.move.id === 'regen') && f.mf % 2 === 0) this.blood.aura(f.x, 1.1, 0, 2, 0xff1838, 0.9, f.move.id === 'regen' ? 0.03 : 0);
     if (f.move && f.move.id === 'passo' && f.mf < 18) this.blood.aura(f.x - f.facing * 0.3, 1.1, 0, 3, 0x80a0ff, 0.6, 0);
@@ -324,6 +343,13 @@ export class GameView {
       if (id === 'punho_magma' && mf >= 6 && mf <= 22) { const h = new THREE.Vector3(); m.rig.handA.getWorldPosition(h); this.blood.aura(h.x, h.y, h.z, 2, 0xff5010, 0.25, 0.02); }
       if (f.move.armor && mf >= f.move.armor[0] && mf <= f.move.armor[1] && mf % 3 === 0) this.blood.aura(f.x, 1.2, 0, 1, 0xffc060, 0.9, 0);
       if (id === 'salto' && mf === 34) { this.cam.shake(0.4); this.blood.spark(f.x + f.facing * 0.6, 0.1, 0.2, 26, 0xff9040, 1.6); this.audio.play('land', { heavy: true }); }
+      // Nymera / Pestilus (v0.4)
+      if (f.charId === 'nymera' && f.move.hits.some((h) => mf >= h.f0 - 2 && mf <= h.f1 + 1) && mf % 2 === 0) { const tp = tip(); this.blood.aura(tp.x, tp.y, tp.z, 1, 0x9ae0ff, 0.12, 0); }
+      if ((id === 'deslize' || id === 'passo_glacial' || id === 'passo_glacial_ex') && mf < 20 && mf % 2 === 0) this.blood.aura(f.x - f.facing * 0.3, 0.3, 0, 3, 0xbfe8ff, 0.5, 0);
+      if (id === 'nevasca' && mf >= 8 && mf <= 40) { for (let i = 0; i < 2; i++) this.blood.aura(f.x + (Math.random() - 0.5) * 2.6, 0.2 + Math.random() * 2, (Math.random() - 0.5) * 0.6, 1, 0xe8faff, 0.3, 0.02); }
+      if (id === 'garra_inverno' && mf >= 6 && mf <= 16) { const h = new THREE.Vector3(); m.rig.handA.getWorldPosition(h); this.blood.aura(h.x, h.y, h.z, 2, 0x9ae0ff, 0.2, 0.02); }
+      if (id === 'miasma' && mf >= 8 && mf <= 24) { for (let i = 0; i < 4; i++) this.blood.aura(f.x + (Math.random() - 0.5) * 2.4, 0.3 + Math.random() * 1.6, (Math.random() - 0.5) * 0.6, 1, 0x70ff30, 0.4, 0.03); if (mf === 10) { this.cam.shake(0.25); this.audio.play('explosion'); } }
+      if ((id === 'bisturi' || id === 'frasco') && f.move.hits.some((h) => mf >= h.f0 - 1 && mf <= h.f1)) { const tp = tip(); this.blood.aura(tp.x, tp.y, tp.z, 2, 0x70ff30, 0.12, 0); }
       if (id === 'terremoto' && mf === 20) { this.blood.spark(f.x + f.facing * 0.8, 0.1, 0.2, 24, 0xff9040, 1.5); }
     }
     if (f.move && (f.move.id === 'julgamento' || f.move.id === 'ruptura') && f.mf === (f.move.id === 'julgamento' ? 21 : 18)) { this.cam.shake(0.25); this.blood.spark(f.x + f.facing * 1.4, 0.1, 0.2, 20, 0xff9040, 1.5); this.audio.play('land', { heavy: true }); }
@@ -401,6 +427,56 @@ export class GameView {
         const s = new THREE.Sprite(glowMat('#5a8cff')); s.scale.set(1.6, 2.6, 1); s.position.y = 1.0; g.add(s);
         break;
       }
+      case 'icelance': {
+        const im = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x4aa8ff, emissiveIntensity: 1.2, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.9 });
+        const c = new THREE.Mesh(new THREE.ConeGeometry(p.ex ? 0.11 : 0.08, p.ex ? 1.3 : 1.0, 6), im); c.rotation.z = -Math.PI / 2 * p.facing; g.add(c);
+        for (const s2 of [-1, 1]) { const f2 = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.35, 4), im); f2.position.set(-p.facing * 0.35, s2 * 0.07, 0); f2.rotation.z = -Math.PI / 2 * p.facing + s2 * 0.5; g.add(f2); }
+        const s = new THREE.Sprite(glowMat('#80d8ff')); s.scale.set(1.5, 0.7, 1); g.add(s);
+        break;
+      }
+      case 'icespikes': case 'trap': {
+        const im = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x2a7ab8, emissiveIntensity: 0.8, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.85 });
+        if (p.fx === 'icespikes') for (let i = 0; i < 7; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.0 + Math.random() * 0.6, 5), im); c.position.set((i - 3) * 0.16, 0.6, (Math.random() - 0.5) * 0.35); c.rotation.z = (i - 3) * 0.14; g.add(c); }
+        else {
+          const ring = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.42, 6), new THREE.MeshBasicMaterial({ color: 0x80d8ff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+          ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; g.add(ring); g.userData.trapRing = ring;
+          for (let i = 0; i < 6; i++) { const a2 = i / 6 * Math.PI * 2; const c = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.18, 4), im); c.position.set(Math.cos(a2) * 0.3, 0.08, Math.sin(a2) * 0.3); c.rotation.set(Math.sin(a2) * 0.5, 0, -Math.cos(a2) * 0.5); g.add(c); }
+        }
+        break;
+      }
+      case 'bomb': {
+        const glass = new THREE.MeshStandardMaterial({ color: 0x0a1a08, emissive: 0x70ff30, emissiveIntensity: 1.4, roughness: 0.1, transparent: true, opacity: 0.9 });
+        g.add(new THREE.Mesh(new THREE.SphereGeometry(p.ex ? 0.16 : 0.12, 10, 8), glass));
+        const n = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a30, metalness: 0.8 })); n.position.y = 0.13; g.add(n);
+        const s = new THREE.Sprite(glowMat('#70ff30')); s.scale.set(0.9, 0.9, 1); g.add(s);
+        break;
+      }
+      case 'cloud': {
+        const mat = new THREE.SpriteMaterial({ map: glowTex('#70ff30'), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.45 });
+        const w = (p.box[2] - p.box[0]), h = p.box[3];
+        for (let i = 0; i < 8; i++) { const s = new THREE.Sprite(mat); s.position.set((Math.random() - 0.5) * w, 0.3 + Math.random() * h * 0.7, (Math.random() - 0.5) * 0.6); s.scale.setScalar(0.9 + Math.random() * 0.7); s.userData.ph = Math.random() * 6; g.add(s); }
+        g.userData.cloudMat = mat;
+        break;
+      }
+      case 'rats': {
+        const m2 = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.8 });
+        const eye = new THREE.MeshBasicMaterial({ color: 0xff3020 });
+        const n = p.ex ? 9 : 6;
+        for (let i = 0; i < n; i++) { const r = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), m2); b.scale.set(1.8, 0.7, 1); r.add(b); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.004, 0.16, 4), m2); t.rotation.z = Math.PI / 2 - 0.3; t.position.x = -p.facing * 0.17; r.add(t); const e2 = new THREE.Mesh(new THREE.SphereGeometry(0.01, 4, 3), eye); e2.position.set(p.facing * 0.09, 0.03, 0.02); r.add(e2); r.position.set((Math.random() - 0.5) * 0.8, 0.05, (Math.random() - 0.5) * 0.5); r.userData.ph = Math.random() * 6; g.add(r); }
+        break;
+      }
+      case 'syringe': {
+        const glass = new THREE.MeshStandardMaterial({ color: 0x0a1a08, emissive: 0x70ff30, emissiveIntensity: 1.3, transparent: true, opacity: 0.9 });
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.3, 8), glass); b.rotation.z = Math.PI / 2; g.add(b);
+        const nd = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.18, 4), new THREE.MeshStandardMaterial({ color: 0xc0c0c8, metalness: 0.9 })); nd.rotation.z = Math.PI / 2; nd.position.x = p.facing * 0.24; g.add(nd);
+        const s = new THREE.Sprite(glowMat('#70ff30')); s.scale.set(0.8, 0.4, 1); g.add(s);
+        break;
+      }
+      case 'crows': {
+        const cm = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.6 });
+        for (let i = 0; i < (p.ex ? 4 : 3); i++) { const c = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), cm); b.scale.set(1, 0.8, 1.6); c.add(b); for (const s2 of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.01, 0.12), cm); w.position.x = s2 * 0.16; w.userData.s = s2; c.add(w); } c.position.set((i - 1) * 0.3, i * 0.15, (Math.random() - 0.5) * 0.4); c.rotation.x = 0.6; g.add(c); }
+        break;
+      }
       case 'clone': {
         const ghost = buildFighter(match.fighters[p.owner].charId, false);
         const och = match.fighters[p.owner].ch;
@@ -436,6 +512,13 @@ export class GameView {
       if (p.fx === 'slash' && Math.random() < 0.7) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0x6090ff, 0.2, 0);
       if (p.fx === 'fireball') { o.rotation.y += dt * 6; o.rotation.x += dt * 4; o.userData.shell.scale.setScalar(1 + Math.sin(this.time * 25) * 0.12); if (Math.random() < 0.9) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0xff5010, 0.15, 0.02); }
       if (p.fx === 'quake') { o.position.y = 0; const k = p.delay > 0 ? 0.2 : Math.min(1, 0.4 + (10 - p.life) * 0.2); o.scale.set(1, k, 1); if (Math.random() < 0.6) this.blood.spark(p.x + (Math.random() - 0.5) * 3, 0.1, 0.2, 1, 0xff8040, 0.8); }
+      if (p.fx === 'icelance' && Math.random() < 0.8) this.blood.aura(p.x - p.facing * 0.4, p.y, 0, 1, 0xbfe8ff, 0.1, 0);
+      if (p.fx === 'icespikes') { o.position.y = 0; const k = p.delay > 0 ? 0.1 + (1 - p.delay / 16) * 0.15 : 1; o.scale.set(p.ex ? 1.5 : 1, k, 1); }
+      if (p.fx === 'trap') { o.position.y = 0; o.visible = true; o.scale.setScalar(p.delay > 0 ? 0.3 : 1); if (o.userData.trapRing) o.userData.trapRing.material.opacity = 0.35 + Math.sin(this.time * 6) * 0.2; }
+      if (p.fx === 'bomb') { o.rotation.z -= dt * 10 * p.facing; if (Math.random() < 0.6) this.blood.aura(p.x, p.y, 0, 1, 0x70ff30, 0.1, 0.01); }
+      if (p.fx === 'cloud') { o.position.y = 0; const life0 = p.life0 || (p.life0 = p.life); const k = Math.min(1, (life0 - p.life) / 12) * Math.min(1, p.life / 20); if (p.delay > 0) o.scale.setScalar(0.3); else o.scale.setScalar(0.6 + k * 0.5); o.userData.cloudMat.opacity = 0.45 * (p.delay > 0 ? 0.3 : k); o.children.forEach((c) => { c.material.rotation = this.time * 0.5 + c.userData.ph; c.position.y += Math.sin(this.time * 2 + c.userData.ph) * 0.002; }); }
+      if (p.fx === 'rats') { o.position.y = 0; o.children.forEach((r) => { r.position.y = 0.05 + Math.abs(Math.sin(this.time * 28 + r.userData.ph)) * 0.04; }); }
+      if (p.fx === 'crows') { o.visible = p.delay <= 0; o.children.forEach((c, i) => c.children.forEach((w) => { if (w.userData.s) w.rotation.z = w.userData.s * Math.sin(this.time * 30 + i) * 0.9; })); }
       if (p.fx === 'spikes') { o.position.y = 0; const k = p.delay > 0 ? 0.15 + (1 - p.delay / 8) * 0.2 : 1; o.scale.set(p.ex ? 1.6 : 1, k, 1); }
     }
     for (const [id, v] of this.proj) {

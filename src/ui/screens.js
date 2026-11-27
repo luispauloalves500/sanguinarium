@@ -1,7 +1,7 @@
 // Telas de menu (DOM): principal, seleção de lutador/arena, opções, lista de golpes, pausa e resultados.
 import { CHARACTERS, ARENAS, moveFrameData } from '../combat/moves.js';
 import { DIFFICULTIES } from '../ai/cpu.js';
-import { ACTIONS, ACTION_LABEL, keyName } from '../input/devices.js';
+import { ACTIONS, ACTION_LABEL, keyName, PAD_ACTIONS, padName } from '../input/devices.js';
 import { buildLadder } from '../modes/arcade.js';
 import { relabel as RL, keyFor } from './keylabels.js';
 const $ = (id) => document.getElementById(id);
@@ -19,7 +19,14 @@ export class Screens {
     $('mainMenu').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.mainAction(b.dataset.act); });
     $('pauseMenu').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) app.pauseAction(b.dataset.act); });
     $('endMenu').addEventListener('click', () => app.toMenu());
-    $('keymapReset').addEventListener('click', () => { app.devices.setBindings(null); app.setOption('keymap1', ''); this.buildKeymap(); });
+    this.kmWho = 'k0';
+    $('keymapWho').querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { this.app.devices.cancelPadCapture(); this.app.devices.capture = null; this.kmWho = b.dataset.w; this.kmNote = ''; this.buildKeymap(); }));
+    $('keymapReset').addEventListener('click', () => {
+      const dev = app.devices, p = +this.kmWho[1];
+      if (this.kmWho[0] === 'k') { dev.setBindings(null, p); app.setOption(p ? 'keymap2' : 'keymap1', ''); }
+      else { dev.setPad(null, p); app.setOption(p ? 'padmap2' : 'padmap1', ''); }
+      this.kmNote = 'Padrão restaurado.'; this.buildKeymap();
+    });
     $('resultMenu').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) app.resultAction(b.dataset.act); });
     $('scr-title').addEventListener('click', () => this.titleGo()); // click (não pointerdown) para o toque não atravessar para o menu
     $('moveTabs').innerHTML = IDS.map((id) => `<button data-ch="${id}">${CHARACTERS[id].name}</button>`).join('') + '<button data-ch="controls">Controles</button>';
@@ -163,14 +170,40 @@ export class Screens {
     $('optList').querySelectorAll('[data-k]').forEach((el) => el.addEventListener('input', () => this.app.setOption(el.dataset.k, el.value)));
     this.buildKeymap();
   }
-  // remapeamento das teclas do P1: clique e pressione a nova tecla (Esc cancela; tecla repetida troca com a outra ação)
+  // v0.4: remapeamento de teclado (J1 e J2) e de gamepad (J1 e J2). Clique e pressione a nova tecla/botão
+  // (Esc cancela; tecla repetida troca com a outra ação; tecla do outro jogador é recusada).
   buildKeymap() {
-    const dev = this.app.devices, b = dev.getBindings();
-    $('keymapList').innerHTML = ACTIONS.map((a) => `<label>${ACTION_LABEL[a]}</label><button data-a="${a}">${keyName(b[a])}</button>`).join('');
+    const dev = this.app.devices, who = this.kmWho || 'k0', p = +who[1], pad = who[0] === 'p';
+    $('keymapWho').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.w === who));
+    const note = this.kmNote || (pad ? (dev.padConnected(p) ? `Gamepad ${p + 1} conectado. Direções: analógico esquerdo / direcional.` : `Nenhum gamepad na porta ${p + 1} — conecte e aperte um botão. Direções: analógico esquerdo / direcional.`) : p ? 'Jogador 2: setas + teclado numérico por padrão (Insert/Home/Delete/End/PgUp/PgDn como alternativa).' : 'Jogador 1: no modo 1 jogador as setas também movem.');
+    $('keymapNote').textContent = note;
+    if (pad) {
+      const m = dev.getPad(p);
+      $('keymapList').innerHTML = PAD_ACTIONS.map((a) => `<label>${ACTION_LABEL[a]}</label><button data-a="${a}">${padName(m[a])}</button>`).join('');
+    } else {
+      const b = dev.getBindings(p);
+      $('keymapList').innerHTML = ACTIONS.map((a) => `<label>${ACTION_LABEL[a]}</label><button data-a="${a}">${keyName(b[a])}</button>`).join('');
+    }
     $('keymapList').querySelectorAll('button').forEach((btn) => btn.addEventListener('click', () => {
+      this.kmNote = '';
+      if (pad) {
+        btn.textContent = `Aperte um botão no gamepad ${p + 1}… (Esc cancela)`; btn.classList.add('wait');
+        dev.capture = (code) => { if (code === 'Escape') dev.cancelPadCapture(); };
+        dev.capturePad(p, (i) => {
+          dev.capture = null;
+          if (i == null) this.kmNote = 'Nenhum botão recebido.';
+          else { const nm = dev.rebindPad(btn.dataset.a, i, p); this.app.setOption(p ? 'padmap2' : 'padmap1', JSON.stringify(nm)); }
+          this.buildKeymap();
+        });
+        return;
+      }
       btn.textContent = 'Pressione uma tecla… (Esc cancela)'; btn.classList.add('wait');
       dev.capture = (code) => {
-        if (code !== 'Escape') { const nb = dev.rebind(btn.dataset.a, code); this.app.setOption('keymap1', JSON.stringify(nb)); }
+        if (code !== 'Escape') {
+          const nb = dev.rebind(btn.dataset.a, code, p);
+          if (nb) this.app.setOption(p ? 'keymap2' : 'keymap1', JSON.stringify(nb));
+          else this.kmNote = `A tecla ${keyName(code)} já é do Jogador ${2 - p}.`;
+        }
         this.buildKeymap();
       };
     }));
@@ -186,7 +219,7 @@ export class Screens {
   showMoves(id) {
     document.querySelectorAll('#scr-moves .tabs button').forEach((b) => b.classList.toggle('on', b.dataset.ch === id));
     const el = $('moveList');
-    if (id === 'controls') { el.innerHTML = controlsHtml(); return; }
+    if (id === 'controls') { el.innerHTML = controlsHtml(this.app.devices); return; }
     const ch = CHARACTERS[id];
     const rowN = (mid) => { const m = ch.moves[mid]; const fd = moveFrameData(m); const h = m.hits[0]; return `<tr><td>${m.name}</td><td>${RL(NORMAL_LABEL[mid] || '')}</td><td>${h ? h.dmg : '-'}</td><td>${h ? LEVEL[h.level] : '-'}</td><td>${fd.startup ?? '-'}</td><td>${m.air ? '-' : fd.advBlock ?? '-'}</td></tr>`; };
     const normals = ['lp', 'hp', 'lk', 'hk', 'clp', 'chp', 'clk', 'chk', 'jlp', 'jhp', 'jlk', 'jhk'];
@@ -222,8 +255,9 @@ export class Screens {
   }
 }
 
-export function controlsHtml() {
-  const k = keyFor;
+export function controlsHtml(dev) {
+  const k = keyFor, k2 = (a) => keyFor(a, 1);
+  const pads = dev ? [dev.getPad(0), dev.getPad(1)] : [null, null].map(() => ({ lp: [2], hp: [3], lk: [0], hk: [1], block: [5, 7], grab: [4], dodge: [6], special: [10, 11] }));
   return `<h5>TECLADO — JOGADOR 1 (teclas atuais; remapeie em Opções)</h5><table>
   <tr><td>Movimento</td><td>${k('up')} ${k('left')} ${k('down')} ${k('right')} (setas também no modo 1 jogador)</td></tr>
   <tr><td>Soco rápido / forte</td><td>${k('lp')} / ${k('hp')}</td></tr><tr><td>Chute rápido / forte</td><td>${k('lk')} / ${k('hk')}</td></tr>
@@ -233,10 +267,10 @@ export function controlsHtml() {
   <tr><td>Elemento da arena</td><td>↑ + ${k('grab')} perto da borda (de costas para ela)</td></tr>
   <tr><td>Transformação (Fúria cheia)</td><td>${k('block')} + ${k('grab')}</td></tr><tr><td>Quebra de combo (2 barras)</td><td>${k('dodge')} + ${k('block')} durante combo sofrido</td></tr>
   <tr><td>Escapar de agarrão</td><td>${k('grab')} logo após ser agarrado</td></tr><tr><td>Pausa</td><td>Esc</td></tr></table>
-  <h5>TECLADO — JOGADOR 2</h5><table>
-  <tr><td>Movimento</td><td>Setas</td></tr><tr><td>Soco rápido / forte</td><td>Num1 / Num2 (ou Insert / Home)</td></tr>
-  <tr><td>Chute rápido / forte</td><td>Num4 / Num5 (ou Delete / End)</td></tr><tr><td>Bloqueio / Agarrão</td><td>Num3 / Num6 (ou PageDown / PageUp)</td></tr>
-  <tr><td>Esquiva / Especial simplificado</td><td>Num0 / Num+ (ou Shift direito / Enter)</td></tr></table>
+  <h5>TECLADO — JOGADOR 2 (teclas atuais; remapeie em Opções)</h5><table>
+  <tr><td>Movimento</td><td>${k2('up')} ${k2('left')} ${k2('down')} ${k2('right')}</td></tr><tr><td>Soco rápido / forte</td><td>${k2('lp')} / ${k2('hp')}</td></tr>
+  <tr><td>Chute rápido / forte</td><td>${k2('lk')} / ${k2('hk')}</td></tr><tr><td>Bloqueio / Agarrão</td><td>${k2('block')} / ${k2('grab')}</td></tr>
+  <tr><td>Esquiva / Especial simplificado</td><td>${k2('dodge')} / ${k2('special')}</td></tr></table>
   <h5>CELULAR</h5><table><tr><td>Direcional virtual</td><td>lado esquerdo</td></tr><tr><td>SR SF CR CF</td><td>socos e chutes rápido/forte</td></tr><tr><td>DEF / AGR / ESQ</td><td>bloqueio, agarrão, esquiva</td></tr><tr><td>ESP</td><td>especial simplificado (neutro, →, ←, ↓; ↑ = supergolpe 1, ↗ = supergolpe 2). Na finalização: ESP, ESP+↓, ESP+→, ESP+← escolhem a Sentença</td></tr></table>
-  <h5>GAMEPAD</h5><table><tr><td>X/Y</td><td>socos</td></tr><tr><td>A/B</td><td>chutes</td></tr><tr><td>RB/RT</td><td>bloqueio</td></tr><tr><td>LB</td><td>agarrão</td></tr><tr><td>LT</td><td>esquiva</td></tr><tr><td>L3/R3</td><td>especial simplificado</td></tr></table>`;
+  <h5>GAMEPAD (J1 / J2 — remapeie em Opções)</h5><table><tr><td>Movimento</td><td>analógico esquerdo ou direcional</td></tr>${PAD_ACTIONS.map((a) => `<tr><td>${ACTION_LABEL[a]}</td><td>${padName(pads[0][a])} / ${padName(pads[1][a])}</td></tr>`).join('')}</table>`;
 }

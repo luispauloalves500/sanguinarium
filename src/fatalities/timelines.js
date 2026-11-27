@@ -924,3 +924,332 @@ Object.assign(SUPERS, {
     else cam.setCine(V(dx + dir * 2, 1.2, 3.6), V(dx, 0.6, 0), 3);
   },
 });
+
+// ================= v0.4 — NYMERA (gelo) e PESTILUS (peste)
+const ICE = 0x9ae0ff, TOXIC = 0x70ff30;
+const ICE_COLS = [new THREE.Color(0xd8f4ff), new THREE.Color(0x9ae0ff), new THREE.Color(0x5aa8d8), new THREE.Color(0x7a0a0a)];
+const ROT = [new THREE.Color(0x3a4a10), new THREE.Color(0x5a6a20), new THREE.Color(0x2a1a08), new THREE.Color(0x6a0a0a), new THREE.Color(0x8aa030)];
+const iceMat = (op = 0.55) => new THREE.MeshStandardMaterial({ color: 0xbfe8ff, emissive: 0x4aa0d8, emissiveIntensity: 0.85, roughness: 0.08, metalness: 0.3, transparent: true, opacity: op, depthWrite: false });
+// bloco de gelo que cresce a partir dos pés (escala Y de 0 a 1)
+function iceBlock(vfx, x, h = 2.1, life = 6) {
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1, 0.8), iceMat()); m.position.y = 0.5; g.add(m);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xe8faff, transparent: true, opacity: 0.8 })); e.position.y = 0.5; g.add(e);
+  for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.5 + Math.random() * 0.4, 5), iceMat(0.8)); c.position.set((Math.random() - 0.5) * 0.9, 1.0, (Math.random() - 0.5) * 0.7); c.rotation.z = (Math.random() - 0.5) * 0.8; g.add(c); }
+  g.position.set(x, 0, 0); g.scale.set(1, 0.001, 1); g.userData.h = h;
+  vfx.add(g, life, null);
+  return g;
+}
+function growIce(b, k) { if (b) b.scale.set(1, Math.max(0.001, b.userData.h * Math.min(1, k)), 1); }
+// estaca de gelo que irrompe do chão
+function iceSpike(vfx, x, z, len, tilt, life = 3, delay = 0) {
+  const s = new THREE.Mesh(new THREE.ConeGeometry(0.12, len, 6), iceMat(0.85)); s.castShadow = true;
+  s.position.set(x, 0, z); s.rotation.z = tilt; s.scale.setScalar(0.001);
+  vfx.add(s, life, (o, age) => { const k = Math.max(0, Math.min(1, (age - delay) * 7)); o.scale.setScalar(Math.max(0.001, k)); o.position.y = len * 0.5 * k - 0.1; if (age > life - 0.4) o.material.opacity = Math.max(0, (life - age) / 0.4) * 0.85; });
+  return s;
+}
+// nuvem tóxica (sprites aditivos)
+function toxicCloud(vfx, x, y, r, life, color = '#70ff30') {
+  const g = new THREE.Group();
+  const mat = new THREE.SpriteMaterial({ map: glowSprite(color), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.5 });
+  for (let i = 0; i < 9; i++) { const s = new THREE.Sprite(mat); s.position.set((Math.random() - 0.5) * r, (Math.random() - 0.3) * r * 0.6, (Math.random() - 0.5) * r * 0.6); s.scale.setScalar(r * (0.7 + Math.random() * 0.5)); s.userData.ph = Math.random() * 6; g.add(s); }
+  g.position.set(x, y, 0);
+  vfx.add(g, life, (o, age) => { mat.opacity = 0.5 * Math.min(1, age * 3) * Math.min(1, (life - age) * 1.5); o.children.forEach((c) => { c.position.y += 0.002; c.material.rotation = age + c.userData.ph; }); o.scale.setScalar(1 + age * 0.15); });
+  return g;
+}
+// corvo simples (corpo + asas que batem) e rato (corpo + cauda)
+const CROW_MAT = new THREE.MeshStandardMaterial({ color: 0x0a0a0c, roughness: 0.6 }); CROW_MAT.userData.shared = true;
+function crow() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), CROW_MAT)).scale.set(1, 0.8, 1.6);
+  const b = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.09, 5), std2(0x2a2a20)); b.rotation.x = Math.PI / 2; b.position.z = 0.14; g.add(b);
+  for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.01, 0.12), CROW_MAT); w.position.x = s * 0.15; w.userData.s = s; g.add(w); g.userData['w' + s] = w; }
+  return g;
+}
+function flap(g, t) { for (const s of [-1, 1]) { const w = g.userData['w' + s]; if (w) w.rotation.z = s * Math.sin(t * 30) * 0.9; } }
+function rat() {
+  const g = new THREE.Group();
+  const m = std2(0x2a2420);
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), m)).scale.set(1, 0.7, 1.8);
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.004, 0.16, 4), std2(0x8a6a60)); t.rotation.x = Math.PI / 2 - 0.3; t.position.set(0, 0.01, -0.17); g.add(t);
+  for (const s of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.008, 4, 3), new THREE.MeshBasicMaterial({ color: 0xff3020 })); e.position.set(s * 0.025, 0.03, 0.09); g.add(e); }
+  return g;
+}
+function std2(c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }); }
+
+Object.assign(FATALITIES, {
+  // ---------------- NYMERA: Estilhaços Humanos (GDD) — congela o oponente e o despedaça com um chute
+  estilhacos_humanos(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'castUp_w' : f < 150 ? 'castUp_s' : f < 172 ? 'kickHigh_w' : f < 200 ? 'kickHigh_s' : 'winNymera', { speed: f >= 150 && f < 200 ? 30 : 6 });
+    pose(def, f < 40 ? 'dizzy' : 'frozen', { speed: f < 40 ? 6 : 2 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(4.0); });
+    ctx.once('ice', 40, () => { state.block = iceBlock(vfx, dx, 2.15, 6); audio.play('freeze'); });
+    if (f >= 40 && f < 130) {
+      growIce(state.block, (f - 40) / 80);
+      if (f % 3 === 0) blood.aura(dx, 0.2 + (f - 40) / 40, 0, 3, ICE, 0.5, 0.01);
+      if (f === 90) tintModel(def.model, 0x9ad8ff, 0.6, 0x2a6aa0, 0.6);
+    }
+    if (f < 150) cam.setCine(V(mid + dir * 0.2 + Math.sin(f * 0.01) * 0.8, 1.2, 3.0), V(dx, 1.1, 0), 2.5);
+    ctx.once('kick', 180, () => {
+      if (state.block) state.block.visible = false;
+      shatter(ctx, 1.5, ICE);
+      const p = worldPos(def.model.rig.chest);
+      blood.gore(p.x, p.y, p.z, 40, ICE_COLS); blood.spark(p.x, p.y, p.z, 80, 0xd8f4ff, 2.0);
+      audio.play('explosion'); audio.play('gore'); audio.play('freeze'); cam.shake(0.6); ctx.hud.flash();
+      ctx.view.flash(0xbfe8ff, 50, 0.6, dx, 1.2, 1);
+      def.model.root.visible = false;
+    });
+    if (f >= 180) cam.setCine(V(dx + dir * 1.6, 1.0, 3.6), V(dx, 0.6, 0), 3);
+    ctx.once('pool', 200, () => blood.pool(dx, 0.1, 1.3));
+    if (f >= 250) cam.setCine(V(ax - dir * 0.6, 1.6, 3.2), V(ax, 1.3, 0), 2);
+  },
+  // ---------------- NYMERA: Frio Absoluto (GDD) — onda glacial congela à distância; o corpo racha e desaba
+  frio_absoluto(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 40 ? 'cast_w' : f < 200 ? 'cast_s' : 'winNymera', { speed: 5 });
+    const k = Math.max(0, Math.min(1, (f - 60) / 90));
+    pose(def, f < 60 ? 'dizzy' : f < 210 ? 'frozen' : 'kneel', { speed: f < 210 ? 1 + (1 - k) * 4 : 2, tilt: f >= 210 ? Math.min(0.6, (f - 210) * 0.02) * dir : 0 });
+    ctx.once('a', 1, () => { audio.play('magic'); ctx.view.darken(4.2); });
+    if (f >= 40 && f < 150) {
+      const t = (f - 40) / 40, x = lerp(ax + dir * 0.5, dx, t);
+      if (f % 2 === 0) blood.aura(x, 0.15 + Math.random() * 1.6, (Math.random() - 0.5) * 0.6, 3, ICE, 0.4, 0.0);
+      if (f % 6 === 0 && t <= 1) iceSpike(vfx, x, (Math.random() - 0.5) * 0.6, 0.5 + Math.random() * 0.4, (Math.random() - 0.5) * 0.6, 3.2);
+    }
+    if (f === 80 || f === 110 || f === 140) { tintModel(def.model, 0xbfe8ff, 0.3, 0x3a7ab0, 0.35 + k * 0.5); audio.play('freeze'); }
+    if (f < 90) cam.setCine(V(ax - dir * 1.4, 1.2, 2.6), V(dx, 1.0, 0), 2.5);
+    else if (f < 210) cam.setCine(V(dx + dir * 1.3, 1.5, 3.0), V(dx, 1.1, 0), 2);
+    ctx.once('crack', 210, () => { audio.play('block'); blood.spark(dx, 1.2, 0, 40, 0xe8faff, 1.2); cam.shake(0.25); });
+    ctx.once('fall', 240, () => {
+      shatter(ctx, 0.45, ICE);
+      const p = worldPos(def.model.rig.chest);
+      blood.gore(p.x, p.y, p.z, 30, ICE_COLS); audio.play('gore'); audio.play('land', { heavy: true }); cam.shake(0.5);
+    });
+    if (f >= 210) cam.setCine(V(mid + dir * 0.8, 1.3, 3.8), V(dx, 0.7, 0), 2.5);
+    ctx.once('pool', 260, () => blood.pool(dx, 0.1, 1.1));
+  },
+  // ---------------- NYMERA: Coração de Gelo (nome proposto) — arranca o coração congelado e o esmaga
+  coracao_gelo(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 40 ? 'lunge_w' : f < 70 ? 'lunge_s' : f < 120 ? 'yank' : f < 200 ? 'castUp_s' : 'winNymera', { speed: f < 70 ? 20 : 6 });
+    pose(def, f < 50 ? 'dizzy' : f < 150 ? 'writhe' : 'lying', f >= 150 ? { lie: 1, speed: 3 } : { speed: 10, tilt: f > 50 ? 0.15 * dir : 0 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(3.6); });
+    ctx.once('stab', 52, () => { const p = worldPos(def.model.rig.chest); blood.burst(p.x, p.y + 0.2, p.z, -dir, 60, 1.2); audio.play('gore'); audio.play('hit', { heavy: true, slash: true }); cam.shake(0.3); });
+    ctx.once('heart', 90, () => {
+      const h = new THREE.Group();
+      h.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 1), new THREE.MeshStandardMaterial({ color: 0x8a0a10, emissive: 0x4a0010, emissiveIntensity: 0.6, roughness: 0.2 })));
+      h.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0), iceMat(0.5)));
+      att.model.rig.handA.add(h); h.position.set(0, -0.12, 0.05);
+      state.heart = h; audio.play('freeze'); audio.play('gore');
+      const p = worldPos(def.model.rig.chest); blood.burst(p.x, p.y + 0.2, p.z, dir, 90, 1.4); blood.gore(p.x, p.y, p.z, 14, FLESH);
+    });
+    if (f >= 95 && f < 160 && f % 6 === 0) audio.play('heartbeat');
+    if (state.heart && f < 200) { const s = 1 + Math.sin(f * 0.6) * 0.08 * Math.max(0, 1 - (f - 90) / 70); state.heart.scale.setScalar(s); }
+    ctx.once('crush', 200, () => {
+      const p = worldPos(state.heart); state.heart.visible = false;
+      blood.spark(p.x, p.y, p.z, 60, 0xd8f4ff, 1.4); blood.gore(p.x, p.y, p.z, 20, ICE_COLS); blood.burst(p.x, p.y, p.z, dir, 40, 0.8);
+      audio.play('explosion'); cam.shake(0.4); ctx.hud.flash(0.5);
+    });
+    if (f < 120) cam.setCine(V((ax + dx) / 2 + dir * 0.1, 1.45, 2.3), V((ax + dx) / 2, 1.3, 0), 2.5);
+    else cam.setCine(V(ax + dir * 0.9, 1.7, 2.0), V(ax, 1.5, 0), 2.5);
+    ctx.once('pool', 170, () => blood.pool(dx, 0.1, 1.4));
+  },
+  // ---------------- NYMERA: Prisão Cristalina (nome proposto) — estacas de gelo empalam e erguem o oponente
+  prisao_cristalina(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'castLow_w' : f < 180 ? 'castLow_s' : 'winNymera', { speed: 6 });
+    const lift = f < 70 ? 0 : f < 200 ? Math.min(1.1, (f - 70) * 0.05) : Math.max(0, 1.1 - (f - 200) * 0.08);
+    pose(def, f < 70 ? 'dizzy' : f < 210 ? 'crucified' : 'lying', f >= 210 ? { lie: 1, speed: 4 } : { lift, speed: 8, tilt: f > 70 && f < 200 ? Math.sin(f * 0.8) * 0.02 : 0 });
+    ctx.once('a', 1, () => { audio.play('magic'); ctx.view.darken(4); });
+    for (const [t, ox, oz, len, tilt] of [[40, -0.7, 0.3, 1.4, -0.5], [48, 0.7, -0.2, 1.5, 0.5], [56, 0, 0.5, 1.3, 0.1], [64, 0.3, -0.5, 1.6, -0.3]]) ctx.once('s' + t, t, () => { iceSpike(vfx, dx + ox, oz, len, tilt, 3.3); audio.play('freeze'); blood.spark(dx + ox, 0.2, oz, 20, ICE, 1); cam.shake(0.15); });
+    ctx.once('impale', 72, () => { state.big = iceSpike(vfx, dx, 0, 2.8, 0, 2.5); const p = worldPos(def.model.rig.spine); blood.burst(p.x, p.y, p.z, dir, 120, 1.5); blood.gore(p.x, p.y, p.z, 20, FLESH); audio.play('gore'); audio.play('hit', { heavy: true }); cam.shake(0.5); ctx.hud.flash(0.5); });
+    if (f > 72 && f < 200 && f % 4 === 0) { const p = worldPos(def.model.rig.spine); blood.drip(p.x, p.y - 0.1, p.z); blood.drip(p.x + 0.05, p.y - 0.2, p.z); }
+    ctx.once('break', 200, () => { blood.spark(dx, 1.4, 0, 90, 0xd8f4ff, 1.8); audio.play('explosion'); cam.shake(0.4); });
+    ctx.once('pool', 215, () => { blood.pool(dx, 0.1, 1.8); audio.play('land', { heavy: true }); });
+    if (f < 72) cam.setCine(V(mid, 1.1, 3.4), V(dx, 0.8, 0), 2.5);
+    else cam.setCine(V(dx + dir * 1.4 + Math.sin(f * 0.02) * 0.6, 1.0, 3.2), V(dx, 1.6, 0), 2.5);
+  },
+
+  // ---------------- PESTILUS: Decomposição (GDD) — injeção que apodrece o corpo até virar uma poça
+  decomposicao(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 30 ? 'lunge_w' : f < 55 ? 'lunge_s' : f < 220 ? 'stance' : 'winPestilus', { speed: f < 55 ? 18 : 4 });
+    const rot = Math.max(0, Math.min(1, (f - 70) / 180));
+    pose(def, f < 60 ? 'dizzy' : f < 200 ? 'writhe' : 'husk', { speed: f < 200 ? 12 : 3, tilt: f >= 200 ? 0.2 * dir : 0 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(4.2); });
+    ctx.once('inject', 48, () => { const p = worldPos(def.model.rig.neck); blood.spark(p.x, p.y, p.z, 30, TOXIC, 1); audio.play('hit', { slash: true }); audio.play('magic'); });
+    for (const t of [90, 140, 190]) ctx.once('rot' + t, t, () => { tintModel(def.model, t < 150 ? 0x5a6a20 : 0x2a2010, 0.35, 0x203000, 0.3); audio.play('gore'); });
+    if (f >= 70 && f < 300) {
+      if (f % 3 === 0) { const p = worldPos(Math.random() < 0.5 ? def.model.rig.chest : def.model.rig.head); blood.aura(p.x, p.y, p.z, 2, TOXIC, 0.4, 0.015); blood.drip(p.x, p.y, p.z); }
+      if (f % 20 === 0) { const p = worldPos(def.model.rig.chest); blood.gore(p.x, p.y, p.z, 6, ROT); }
+      if (f >= 200) def.model.root.scale.set(1 + rot * 0.15, Math.max(0.12, 1 - (f - 200) / 110), 1 + rot * 0.15);
+    }
+    ctx.once('cloud', 210, () => toxicCloud(vfx, dx, 0.5, 1.4, 2.5));
+    ctx.once('pool', 230, () => { blood.pool(dx, 0.1, 2.0); audio.play('gore'); });
+    if (f < 60) cam.setCine(V((ax + dx) / 2, 1.5, 2.6), V(dx, 1.4, 0), 2.5);
+    else if (f < 200) cam.setCine(V(dx + dir * 1.0, 1.4, 2.8), V(dx, 1.15, 0), 2);
+    else cam.setCine(V(dx + dir * 1.2, 1.4, 3.2), V(dx, 0.4, 0), 2.5);
+  },
+  // ---------------- PESTILUS: Último Experimento (GDD) — força o frasco goela abaixo; o corpo incha e explode
+  ultimo_experimento(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 70 ? 'grab_s' : f < 90 ? 'throwAxe_s' : f < 230 ? 'stance' : 'winPestilus', { speed: 8 });
+    pose(def, f < 30 ? 'dizzy' : f < 70 ? 'dangle' : 'writhe', { lift: f >= 30 && f < 70 ? 0.25 : 0, speed: 12 });
+    ctx.once('a', 1, () => { audio.play('throw'); ctx.view.darken(3.6); });
+    ctx.once('drink', 40, () => { const p = worldPos(def.model.rig.head); blood.spark(p.x, p.y, p.z, 30, TOXIC, 0.8); audio.play('magic'); });
+    if (f >= 90 && f < 170) {
+      const k = (f - 90) / 80, ch = def.model.rig.chest, hd = def.model.rig.head;
+      ch.scale.setScalar(1 + k * 0.9); hd.scale.setScalar(1 + k * 0.4);
+      if (f % 10 === 0) { audio.play('heartbeat'); blood.aura(dx, 1.2, 0, 6, TOXIC, 0.5, 0.01); }
+      if (f === 130) tintModel(def.model, 0x6a8a20, 0.4, 0x305000, 0.6);
+    }
+    ctx.once('boom', 172, () => {
+      shatter(ctx, 1.7, TOXIC);
+      const p = worldPos(def.model.rig.chest);
+      blood.burst(p.x, p.y, p.z, dir, 200, 2.0); blood.gore(p.x, p.y, p.z, 45, ROT); blood.spark(p.x, p.y, p.z, 60, TOXIC, 2);
+      toxicCloud(vfx, dx, 1.1, 2.2, 3);
+      audio.play('explosion'); audio.play('gore'); cam.shake(0.8); ctx.hud.flash(); ctx.view.flash(0x70ff30, 50, 0.7, dx, 1.2, 1);
+      def.model.root.visible = false;
+    });
+    ctx.once('pool', 190, () => blood.pool(dx, 0.1, 2.2));
+    if (f < 172) cam.setCine(V((ax + dx) / 2 + dir * 0.3, 1.5, 2.5), V(dx, 1.3, 0), 2.5);
+    else cam.setCine(V(dx + dir * 1.8, 1.4, 4.0), V(dx, 0.8, 0), 3);
+  },
+  // ---------------- PESTILUS: Enxame Faminto (nome proposto) — ratos e corvos devoram o oponente até o osso
+  enxame_faminto(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 40 ? 'castLow_w' : f < 220 ? 'castLow_s' : 'winPestilus', { speed: 5 });
+    pose(def, f < 70 ? 'dizzy' : f < 200 ? 'writhe' : 'lying', f >= 200 ? { lie: 1, speed: 3 } : { speed: 14 });
+    ctx.once('a', 1, () => { audio.play('magic'); ctx.view.darken(4); });
+    if (!state.rats && f >= 30) {
+      state.rats = [];
+      for (let i = 0; i < 18; i++) {
+        const r = rat(); r.scale.setScalar(1.7); const z0 = (Math.random() - 0.5) * 1.2, x0 = ax - dir * (0.2 + Math.random() * 0.8), delay = Math.random() * 0.5;
+        r.position.set(x0, 0.05, z0); r.lookAt(dx, 0.05, 0);
+        vfx.add(r, 5, (o, age) => {
+          const k = Math.max(0, Math.min(1, (age - delay) / 0.9));
+          const tx = dx + Math.sin(i * 1.7 + age * 6) * 0.25, tz = Math.cos(i * 1.3 + age * 6) * 0.25;
+          o.position.x = lerp(x0, tx, k); o.position.z = lerp(z0, tz, k);
+          o.position.y = 0.05 + (k >= 1 ? Math.min(1.3, (age - delay - 0.9) * 0.8) * ((i % 3) / 2) : Math.abs(Math.sin(age * 30)) * 0.02);
+          if (k >= 1) o.lookAt(dx, o.position.y + 0.3, 0);
+          if (Math.random() < 0.06) blood.aura(o.position.x, o.position.y + 0.05, o.position.z, 1, 0xff3020, 0.05, 0);
+        });
+        state.rats.push(r);
+      }
+      audio.play('whoosh');
+    }
+    if (!state.crows && f >= 90) {
+      state.crows = [];
+      for (let i = 0; i < 7; i++) {
+        const c = crow(); vfx.add(c, 4, (o, age) => { const a = age * 3 + i; o.position.set(dx + Math.cos(a) * (0.6 + (i % 3) * 0.2), 1.3 + Math.sin(a * 1.3) * 0.4 + (i % 2) * 0.4, Math.sin(a) * 0.6); o.lookAt(dx, 1.2, 0); flap(o, age + i); });
+        state.crows.push(c);
+      }
+    }
+    if (f >= 80 && f < 220 && f % 5 === 0) { const p = worldPos([def.model.rig.chest, def.model.rig.hipA, def.model.rig.head, def.model.rig.shB][f % 4]); blood.burst(p.x, p.y, p.z, Math.random() < 0.5 ? dir : -dir, 10, 0.6); if (f % 15 === 0) { blood.gore(p.x, p.y, p.z, 4, FLESH); audio.play('gore'); } }
+    ctx.once('bone', 170, () => tintModel(def.model, 0xd8ccb0, 0.7, 0x000000, 0));
+    ctx.once('pool', 200, () => { blood.pool(dx, 0.1, 1.9); audio.play('land', { heavy: true }); });
+    if (f < 70) cam.setCine(V(mid, 0.6, 3.2), V(mid, 0.3, 0), 2.5);
+    else cam.setCine(V(dx + dir * 1.2 + Math.sin(f * 0.015), 1.3, 2.8), V(dx, 0.9, 0), 2.5);
+  },
+  // ---------------- PESTILUS: Dissecação (nome proposto) — prende, abre o tórax e remove os membros
+  dissecacao(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x;
+    pose(att, f < 200 ? (Math.floor(f / 10) % 2 ? 'claw_s' : 'claw_w') : 'winPestilus', { speed: 14 });
+    pose(def, f < 30 ? 'dizzy' : f < 220 ? 'crucified' : 'lying', f >= 220 ? { lie: 1, speed: 3 } : { lift: Math.min(0.2, f * 0.01), speed: 6 });
+    ctx.once('a', 1, () => { audio.play('heartbeat'); ctx.view.darken(4.4); });
+    for (const [t, y, r] of [[40, 1.3, 0.9], [60, 1.1, -0.9], [80, 1.25, 0]]) ctx.once('c' + t, t, () => { slashArc(vfx, dx - dir * 0.1, y, 0.12, [0, 0, r], TOXIC, 0.35, 0.3); blood.burst(dx, y, 0.1, -dir, 40, 0.9); audio.play('hit', { slash: true }); });
+    ctx.once('open', 100, () => { const p = worldPos(def.model.rig.chest); blood.gore(p.x, p.y, p.z, 30, FLESH); blood.burst(p.x, p.y, p.z, -dir, 120, 1.3); audio.play('gore'); cam.shake(0.3); });
+    ctx.once('armA', 140, () => { const r = def.model.rig; goreCap(r.chest, [r.dims.shoulder, r.dims.torso * 0.42, 0], 0.07, glowRed()); vfx.detach(r.shA, V(-dir * 0.03, 0.05, 0.03), V(0.1, 0.1, 0.2), { restY: 0.08, bounce: 0.2 }); const p = worldPos(r.shA); blood.burst(p.x, p.y, p.z, -dir, 60, 1.2); audio.play('gore'); });
+    ctx.once('armB', 175, () => { const r = def.model.rig; goreCap(r.chest, [-r.dims.shoulder, r.dims.torso * 0.42, 0], 0.07, glowRed()); vfx.detach(r.shB, V(-dir * 0.03, 0.06, -0.03), V(0.2, 0.1, 0.1), { restY: 0.08, bounce: 0.2 }); const p = worldPos(r.shB); blood.burst(p.x, p.y, p.z, -dir, 60, 1.2); audio.play('gore'); cam.shake(0.3); });
+    if (f > 100 && f < 260 && f % 3 === 0) { const p = worldPos(def.model.rig.chest); blood.drip(p.x, p.y, p.z + 0.1); }
+    ctx.once('pool', 225, () => { blood.pool(dx, 0.1, 1.7); audio.play('land', { heavy: true }); });
+    if (f < 200) cam.setCine(V((ax + dx) / 2 + dir * 0.2, 1.5, 2.2), V(dx, 1.2, 0), 2.5);
+    else cam.setCine(V(ax - dir * 0.6, 1.7, 3.2), V(ax, 1.4, 0), 2);
+  },
+});
+
+Object.assign(SUPERS, {
+  // ---------------- NYMERA: Inverno Eterno (nome proposto) — nevasca + lanças de gelo; o oponente fica preso no gelo
+  inverno_eterno(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'castUp_w' : f < 120 ? 'cast_s' : 'castUp_s', { speed: 6 });
+    pose(def, f < 125 ? (f > 30 && f % 20 < 5 ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 125 ? 0.4 : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); audio.play('freeze'); ctx.hud.flash(0.4); ctx.view.darken(2.4); });
+    ctx.once('blk', 24, () => { state.block = iceBlock(vfx, dx, 2.15, 1.75); });
+    if (f >= 24 && f < 60) growIce(state.block, (f - 24) / 30);
+    if (f % 2 === 0) blood.aura(mid + (Math.random() - 0.5) * 4, 3, (Math.random() - 0.5) * 2, 3, 0xe8faff, 0.2, -0.03);
+    [40, 60, 80, 100].forEach((h, i) => ctx.once('l' + i, h - 10, () => {
+      const l = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.8, 6), iceMat(0.9));
+      const a = -0.9 + i * 0.6, from = V(dx + Math.cos(a) * 3 * -dir, 1.2 + Math.sin(a) * 1.5 + 1, 0.4), to = V(dx, 1.2, 0);
+      l.position.copy(from); l.lookAt(to); l.rotateX(Math.PI / 2);
+      vfx.add(l, 10 / 60 + 0.05, (o, age) => o.position.lerpVectors(from, to, Math.min(1, age * 6)));
+      ctx.once('lh' + i, h, () => { blood.spark(dx, 1.2, 0, 30, ICE, 1.3); blood.burst(dx, 1.2, 0, dir, 20, 0.8); audio.play('hit', { slash: true }); cam.shake(0.2); });
+    }));
+    ctx.once('boom', 125, () => { if (state.block) state.block.visible = false; blood.spark(dx, 1.1, 0, 120, 0xd8f4ff, 2.0); blood.burst(dx, 1.2, 0, dir, 80, 1.4); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0xbfe8ff, 40, 0.6, dx, 1.3, 1); });
+    const ang = f * 0.03;
+    cam.setCine(V(mid + Math.sin(ang) * 3.2 * dir, 1.5, Math.cos(ang) * 3.2), V(dx, 1.2, 0), 3);
+  },
+  // ---------------- NYMERA: Túmulo de Gelo (nome proposto) — estacas fecham um sarcófago e implodem
+  tumulo_gelo(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'castLow_w' : f < 140 ? 'castLow_s' : 'winNymera', { speed: 6 });
+    pose(def, f < 140 ? (f > 50 && f < 60 ? 'hitHigh' : 'frozen') : 'tumble', { speed: 20, lift: f >= 140 ? Math.min(1, (f - 140) * 0.05) : Math.min(0.5, Math.max(0, f - 50) * 0.02) });
+    ctx.once('fx', 1, () => { audio.play('super'); ctx.hud.flash(0.4); ctx.view.darken(2.8); });
+    for (let i = 0; i < 8; i++) ctx.once('sp' + i, 20 + i * 4, () => { const a = (i / 8) * Math.PI * 2; iceSpike(vfx, dx + Math.cos(a) * 0.7, Math.sin(a) * 0.5, 2.4, -Math.cos(a) * 0.35, 2.2); audio.play('freeze'); });
+    ctx.once('lock', 54, () => { cam.shake(0.3); blood.burst(dx, 1.2, 0, dir, 40, 1); audio.play('hit', { heavy: true }); });
+    if (f > 60 && f < 140 && f % 4 === 0) blood.aura(dx, 0.4 + Math.random() * 2, 0, 3, ICE, 0.6, 0.01);
+    ctx.once('boom', 140, () => { blood.spark(dx, 1.3, 0, 140, 0xd8f4ff, 2.2); blood.burst(dx, 1.4, 0, dir, 110, 1.6); audio.play('explosion'); cam.shake(0.7); ctx.hud.flash(); ctx.view.flash(0x9ae0ff, 50, 0.7, dx, 1.4, 1); blood.pool(dx, 0.2, 1.0); });
+    cam.setCine(V(mid + dir * 0.4 - Math.sin(f * 0.012) * 2.6 * dir, 1.0 + f * 0.006, 3.8), V(dx, 1.3, 0), 3);
+  },
+  // ---------------- PESTILUS: Pandemia (nome proposto) — nuvem pestilenta que se expande e corrói
+  pandemia(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'castUp_w' : 'castUp_s', { speed: 6 });
+    const hits = [40, 62, 84, 106];
+    pose(def, f < 130 ? (hits.some((h) => f >= h && f < h + 8) ? 'writhe' : 'dizzy') : 'tumble', { speed: 18, lift: f >= 130 ? 0.3 : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); audio.play('magic'); ctx.hud.flash(0.4); ctx.view.darken(2.6); });
+    ctx.once('cl', 20, () => { toxicCloud(vfx, mid, 1.0, 2.6, 2.3); toxicCloud(vfx, dx, 1.4, 1.8, 2.1, '#a0ff50'); });
+    hits.forEach((h, i) => ctx.once('h' + i, h, () => { blood.spark(dx, 1.1 + i * 0.1, 0, 30, TOXIC, 1.2); blood.burst(dx, 1.2, 0, i % 2 ? dir : -dir, 25, 0.8); audio.play('hit'); cam.shake(0.2); }));
+    if (f % 3 === 0) blood.aura(dx, 0.3 + Math.random() * 2, 0, 3, TOXIC, 0.8, 0.02);
+    ctx.once('boom', 130, () => { blood.spark(dx, 1.2, 0, 120, TOXIC, 2.0); blood.burst(dx, 1.2, 0, dir, 100, 1.6); audio.play('explosion'); cam.shake(0.6); ctx.hud.flash(); ctx.view.flash(0x70ff30, 50, 0.6, dx, 1.3, 1); });
+    cam.setCine(V(mid + Math.sin(f * 0.025) * 3.4 * dir, 1.6, Math.cos(f * 0.025) * 3.4), V(mid, 1.2, 0), 3);
+  },
+  // ---------------- PESTILUS: Praga Negra (nome proposto) — revoada de corvos bica o oponente até cair
+  praga_negra(ctx) {
+    const { f, att, def, dir, cam, blood, vfx, audio, state } = ctx;
+    const ax = att.x, dx = def.x, mid = (ax + dx) / 2;
+    pose(att, f < 30 ? 'cast_w' : f < 140 ? 'cast_s' : 'winPestilus', { speed: 6 });
+    const peck = f > 40 && f < 140 && f % 12 < 4;
+    pose(def, f < 140 ? (peck ? 'hitHigh' : 'block') : 'tumble', { speed: 22, lift: f >= 140 ? 0.4 : 0 });
+    ctx.once('fx', 1, () => { audio.play('super'); ctx.hud.flash(0.4); ctx.view.darken(2.8); });
+    if (!state.crows && f >= 20) {
+      state.crows = [];
+      for (let i = 0; i < 14; i++) {
+        const c = crow(); c.scale.setScalar(1.5); const from = V(ax - dir * 0.5, 2.6 + Math.random(), (Math.random() - 0.5) * 2);
+        vfx.add(c, 2.4, (o, age) => {
+          const k = Math.min(1, age * 1.6), a = age * (4 + i * 0.2) + i;
+          const to = V(dx + Math.cos(a) * (0.4 + (i % 4) * 0.15), 0.9 + (i % 5) * 0.2 + Math.sin(a * 2) * 0.2, Math.sin(a) * 0.5);
+          o.position.lerpVectors(from, to, k); o.lookAt(dx, 1.2, 0); flap(o, age + i);
+          if (Math.random() < 0.15) blood.aura(o.position.x, o.position.y, o.position.z, 1, 0x60ff20, 0.05, 0);
+          if (ctx.f > 140) o.position.y += (ctx.f - 140) * 0.06;
+        });
+        state.crows.push(c);
+      }
+      audio.play('whoosh');
+    }
+    if (peck && f % 12 === 1) { blood.burst(dx, 1.0 + Math.random() * 0.8, 0, Math.random() < 0.5 ? dir : -dir, 20, 0.8); audio.play('hit', { slash: true }); }
+    ctx.once('boom', 140, () => { blood.burst(dx, 1.2, 0, dir, 100, 1.5); blood.spark(dx, 1.2, 0, 60, 0x60ff20, 1.6); audio.play('explosion'); cam.shake(0.5); ctx.hud.flash(); blood.pool(dx, 0.2, 1.0); });
+    cam.setCine(V(mid - Math.sin(f * 0.02) * 3.4 * dir, 1.5 + f * 0.004, 3.8), V(dx, 1.3, 0), 3);
+  },
+});

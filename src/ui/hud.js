@@ -69,7 +69,7 @@ export class Hud {
     if (this.fadeEl) this.fadeEl.style.opacity = fade.toFixed(3);
     match.fighters.forEach((f, i) => {
       const it = match.phase === 'fight' ? interactionFor(st, f) : null;
-      const txt = it ? `↑ + ${i === 0 ? keyFor('grab') : 'Num6'} · ${it.name}` : '';
+      const txt = it ? `↑ + ${keyFor('grab', i)} · ${it.name}` : '';
       if (txt !== this._hint[i]) { this._hint[i] = txt; if (this.hintEls[i]) { if (txt) this.hintEls[i].textContent = txt; this.hintEls[i].classList.toggle('on', !!txt); } }
     });
     if (this.stageT > 0 && (this.stageT -= steps) <= 0 && this.stageEl) this.stageEl.classList.remove('on');

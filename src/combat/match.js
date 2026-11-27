@@ -23,7 +23,7 @@ export function createFighter(idx, charId) {
     hitstun: 0, blockstun: 0, frozen: 0, kdTimer: 0, invuln: 0, hidden: false,
     crouching: false, blocking: false, airborne: false, airUsed: false, jumpDir: 0,
     juggle: 0, juggleProt: false, comboHits: 0, comboDmg: 0, lastBlockEdge: -99,
-    regenUses: C.REGEN_USES, healAcc: 0, used: -1, inp: new InputBuffer(), stats: { hits: 0, maxCombo: 0, dmg: 0, blocks: 0, specials: 0 },
+    regenUses: C.REGEN_USES, healAcc: 0, poison: 0, poisonBy: -1, frozenIce: false, used: -1, inp: new InputBuffer(), stats: { hits: 0, maxCombo: 0, dmg: 0, blocks: 0, specials: 0 },
   };
 }
 
@@ -51,6 +51,7 @@ export class Match {
         y: 0, vx: 0, vy: 0, pushV: 0, hp: C.MAX_HP, fury: 0, furyActive: 0, state: 'idle', sf: 0, move: null, mf: 0,
         hitstun: 0, blockstun: 0, frozen: 0, kdTimer: 0, invuln: 0, hidden: false, crouching: false, blocking: false,
         airborne: false, airUsed: false, juggle: 0, juggleProt: false, comboHits: 0, comboDmg: 0, regenUses: C.REGEN_USES, healAcc: 0,
+        poison: 0, poisonBy: -1, frozenIce: false, swing: null,
       });
       f.inp.reset(); f.used = -1;
     }
@@ -97,7 +98,23 @@ export class Match {
     this.updateProjectiles();
     stepStage(this);
     this.collide();
+    this.tickPoison();
     this.rules();
+  }
+
+  // v0.4 (Pestilus): veneno — dano contínuo pequeno; nunca nocauteia sozinho (para em 1 de vida)
+  tickPoison() {
+    for (const f of this.fighters) {
+      if (!(f.poison > 0)) continue;
+      f.poison--;
+      if (f.poison % 15 === 0 && f.hp > 1 && this.phase === 'fight') {
+        const d = Math.min(C.POISON_TICK, f.hp - 1);
+        f.hp -= d;
+        const att = this.fighters[f.poisonBy] || this.fighters[1 - f.idx];
+        att.stats.dmg += d;
+        this.emit({ type: 'poison', who: f.idx, x: f.x, dmg: d, left: f.poison });
+      }
+    }
   }
 
   // ---------------------------------------------------------------- lutador
@@ -337,13 +354,19 @@ export class Match {
     const ex = f.ex ? t.ex || {} : {};
     const fury = f.furyActive ? 1.15 : 1;
     const x = s.atTarget ? o.x : s.at != null ? f.x + f.facing * s.at : f.x + f.facing * 0.8;
-    const hitData = { ...t.hit, dmg: Math.round((ex.dmg ?? t.hit.dmg)), freeze: ex.freeze ?? t.hit.freeze };
+    const hitData = { ...t.hit, dmg: Math.round((ex.dmg ?? t.hit.dmg)), freeze: ex.freeze ?? t.hit.freeze, effect: ex.effect ?? t.hit.effect, poison: ex.poison ?? t.hit.poison, ice: ex.ice ?? t.hit.ice };
+    // v0.4: armadilhas com limite de instâncias ativas por dono (a mais antiga some)
+    if (t.maxActive) {
+      const mine = this.projectiles.filter((q) => q.alive && q.owner === f.idx && q.kind === s.proj);
+      while (mine.length >= t.maxActive) mine.shift().alive = false;
+    }
     let box = t.box;
     if (ex.wide) box = [box[0] - ex.wide / 2, box[1], box[2] + ex.wide / 2, box[3]];
     const p = {
       id: (this.projId = (this.projId || 0) + 1), owner: f.idx, kind: s.proj, fx: t.fx, x, y: t.y + (t.ground ? 0 : 0),
       vx: (ex.vx ?? t.vx) * f.facing * fury, vy: t.vy || 0, box, life: t.life, delay: t.delay || 0, facing: f.facing,
       clash: t.clash, hit: hitData, ex: f.ex, alive: true, age: 0,
+      grav: t.grav || 0, burst: t.burst || null, linger: !!t.linger, tick: t.tick || 0, cd: 0,
     };
     this.projectiles.push(p);
     this.emit({ type: 'proj', who: f.idx, kind: s.proj, x: p.x, y: p.y, ex: f.ex });
@@ -474,7 +497,21 @@ export class Match {
       p.age++;
       if (p.delay > 0) { p.delay--; continue; }
       p.x += p.vx; p.y += p.vy;
-      if (p.fx === 'rain' && p.y < 0.5) { p.y = 0.5; p.vy = 0; p.life = Math.min(p.life, 3); }
+      if (p.cd > 0) p.cd--;
+      if (p.grav) {
+        p.vy -= p.grav;
+        // bomba em arco: ao tocar o chão vira nuvem tóxica (projétil persistente do mesmo dono)
+        if (p.y <= 0.12 && p.vy < 0) {
+          const t = p.burst && this.fighters[p.owner].ch.projectiles[p.burst];
+          if (t) {
+            Object.assign(p, { kind: p.burst, fx: t.fx, y: 0, vx: 0, vy: 0, grav: 0, box: t.box, life: t.life, clash: false, linger: !!t.linger, tick: t.tick || 0, cd: 0,
+              hit: { ...t.hit, dmg: p.ex ? (t.ex && t.ex.dmg) || t.hit.dmg : t.hit.dmg, poison: p.ex ? (t.ex && t.ex.poison) || t.hit.poison : t.hit.poison } });
+            if (p.ex && t.ex && t.ex.wide) p.box = [p.box[0] - t.ex.wide / 2, p.box[1], p.box[2] + t.ex.wide / 2, p.box[3]];
+            this.emit({ type: 'burst', who: p.owner, kind: p.kind, x: p.x });
+          } else p.alive = false;
+        }
+      }
+      if ((p.fx === 'rain' || p.fx === 'crows') && p.y < 0.5) { p.y = 0.5; p.vy = 0; p.life = Math.min(p.life, 3); }
       if (--p.life <= 0 || Math.abs(p.x) > C.STAGE_HALF + 1.5) p.alive = false;
     }
     // colisão entre projéteis
@@ -512,12 +549,12 @@ export class Match {
       this.applyHit(p.att, p.def, p.h, p.move, null, ix, iy);
     }
     for (const pr of this.projectiles) {
-      if (!pr.alive || pr.delay > 0) continue;
+      if (!pr.alive || pr.delay > 0 || pr.cd > 0) continue;
       const att = F[pr.owner], def = F[1 - pr.owner];
       const pb = projBox(pr);
       const hurt = def.state === 'dizzy' ? [worldBox(def, [-0.4, 0, 0.4, def.ch.height])] : hurtboxes(def);
-      if (hurt.some((u) => overlap(pb, u))) {
-        pr.alive = false;
+      if (hurt.some((u) => overlap(pb, u)) && !(pr.linger && (def.state === 'knockdown' || def.state === 'getup' || def.invuln > 0))) {
+        if (pr.linger) pr.cd = pr.tick; else pr.alive = false;
         this.applyHit(att, def, pr.hit, { kind: 'special', name: pr.kind }, pr, def.x - pr.facing * 0.2, clamp(pr.y + (pr.box[1] + pr.box[3]) / 2, 0.3, 1.7));
       }
     }
@@ -594,6 +631,7 @@ export class Match {
     }
     def.hp = Math.max(0, def.hp - dmg);
     if (this.opts.training && def.hp <= 0) def.hp = 1;
+    if (h.poison) { def.poison = Math.max(def.poison || 0, h.poison); def.poisonBy = att.idx; }
     def.comboHits++; def.comboDmg += dmg;
     att.stats.hits++; att.stats.dmg += dmg; att.stats.maxCombo = Math.max(att.stats.maxCombo, def.comboHits);
     const wasAir = def.airborne || def.state === 'juggle';
@@ -605,7 +643,7 @@ export class Match {
       def.juggle++;
       if (def.juggle >= C.JUGGLE_MAX) def.juggleProt = true;
     } else if (h.effect === 'freeze') {
-      def.state = 'frozen'; def.frozen = h.freeze || 70; def.sf = 0; def.vx = 0;
+      def.state = 'frozen'; def.frozen = h.freeze || 70; def.sf = 0; def.vx = 0; def.frozenIce = !!h.ice;
       this.emit({ type: 'freeze', who: def.idx, frames: def.frozen });
     } else {
       def.state = 'hitstun'; def.sf = 0; def.vx = 0;
