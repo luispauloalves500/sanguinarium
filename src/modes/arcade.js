@@ -6,7 +6,7 @@ export function buildLadder(charId, difficulty = 1) {
   const ids = Object.keys(CHARACTERS);
   const start = ids.indexOf(charId);
   const rivals = [1, 2, 3].map((k) => ids[(start + k) % ids.length]).filter((id) => id !== charId);
-  const arenas = ['coliseu', 'catedral'];
+  const arenas = ['coliseu', 'catedral', 'templo', 'forja'];
   const d = (k) => Math.max(0, Math.min(4, difficulty + k));
   const titles = ['o primeiro pacto', 'o pacto quebrado', 'o pacto final'];
   const ladder = rivals.map((r, i) => ({ p2: r, arena: arenas[(start + i) % 2], difficulty: d(i === 2 ? 1 : 0), title: `${CHARACTERS[r].name} — ${titles[i]}` }));

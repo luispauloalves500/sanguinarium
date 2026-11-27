@@ -435,11 +435,14 @@ export function moveFrameData(m) {
 export const ARENAS = {
   coliseu: { id: 'coliseu', name: 'Coliseu Carmesim', desc: 'Arquibancadas demoníacas e poços de lava.' },
   catedral: { id: 'catedral', name: 'Catedral Profana', desc: 'Estátuas, vitrais e altares ritualísticos.' },
+  templo: { id: 'templo', name: 'Templo dos Samurais Mortos', desc: 'Estátuas destrutíveis e espíritos ancestrais.' },
+  forja: { id: 'forja', name: 'Forja Infernal', desc: 'Lava, correntes e fornalhas.' },
 };
 
 // golpes genéricos compartilhados (transformação)
 for (const ch of Object.values(CHARACTERS)) {
   ch.moves.empurra_estatua = { id: 'empurra_estatua', name: 'Estátua do Carrasco', frames: 26, hits: [], kind: 'interact', cancel: [], anim: 'grab' };
+  ch.moves.invoca_espirito = { id: 'invoca_espirito', name: 'Espírito Ancestral', frames: 30, hits: [], kind: 'interact', cancel: [], anim: 'cast' };
   ch.moves.fury_on = { id: 'fury_on', name: ch.transform, frames: 40, hits: [], kind: 'transform', cancel: [], anim: 'roar', invuln: [0, 40] };
 }
 // duração e distância canônica das finalizações (timeline cinematográfica)

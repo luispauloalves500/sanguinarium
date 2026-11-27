@@ -8,6 +8,12 @@ const SC = {
   lava: { arena: 'coliseu', p: [5.7, 6.72], p1: 'varkhan', p2: 'lilith', in0: [2 | 128, 2, 2], noTrans: true, shots: [16, 24, 34] },
   brasa: { arena: 'catedral', p: [5.7, 6.72], p1: 'lilith', p2: 'varkhan', in0: [2 | 128, 2, 2], noTrans: true, shots: [16, 24, 34] },
   'trans-coliseu': { arena: 'coliseu', p: [5.9, 6.95], p1: 'varkhan', p2: 'lilith', in0: [2 | 128, 2, 2], trans: [20, 50, 75, 110, 150, 200] },
+  spirit: { arena: 'templo', p: [-7.1, -3.6], p1: 'kazuro', p2: 'brakkor', in0: [1 | 512, 2], shots: [10, 24, 40, 56] },
+  swing: { arena: 'forja', p: [-7.1, -4.6], p1: 'brakkor', p2: 'kazuro', in0: [1 | 512, 2], shots: [8, 18, 26, 44] },
+  shatter: { arena: 'templo', p: [5.7, 6.72], p1: 'varkhan', p2: 'lilith', in0: [2 | 128, 2, 2], noTrans: true, shots: [16, 24, 40] },
+  fornalha: { arena: 'forja', p: [5.7, 6.72], p1: 'varkhan', p2: 'lilith', in0: [2 | 128, 2, 2], noTrans: true, shots: [16, 24, 34] },
+  'trans-templo': { arena: 'templo', p: [5.9, 6.95], p1: 'kazuro', p2: 'lilith', in0: [2 | 128, 2, 2], trans: [50, 110, 200] },
+  'trans-forja': { arena: 'forja', p: [5.9, 6.95], p1: 'brakkor', p2: 'varkhan', in0: [2 | 128, 2, 2], trans: [50, 110, 200] },
   'trans-catedral': { arena: 'catedral', p: [5.9, 6.95], p1: 'varkhan', p2: 'lilith', in0: [2 | 128, 2, 2], trans: [20, 50, 75, 110, 150, 200] },
 }[scn];
 const b = await launch(); const { page, logs } = await open(b);

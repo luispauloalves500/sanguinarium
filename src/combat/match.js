@@ -426,7 +426,7 @@ export class Match {
       else { f.state = 'knockdown'; f.kdTimer = C.KNOCKDOWN_FRAMES; f.sf = 0; }
       this.emit({ type: 'land', who: f.idx, x: f.x, heavy: true });
     } else if (f.state === 'vault') {
-      f.state = 'land'; f.sf = 0; f.vx = 0; f.invuln = Math.min(f.invuln, 2);
+      f.state = 'land'; f.sf = 0; f.vx = 0; f.invuln = Math.min(f.invuln, 2); f.swing = null;
       this.emit({ type: 'land', who: f.idx, x: f.x, heavy: false });
     } else if (f.state === 'air') {
       f.move = null; f.state = 'land'; f.sf = 0; f.vx = 0;

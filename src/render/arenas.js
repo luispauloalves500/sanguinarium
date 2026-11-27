@@ -1,9 +1,10 @@
 // Arenas: Coliseu Carmesim e Catedral Profana (geometria procedural).
 import * as THREE from 'three';
+import { templo, cemiterio, forja, coracao } from './arenas2.js';
 import { sandTexture, stoneWallTexture, tileTexture, stainedGlassTexture, lavaTexture, glowSprite } from './textures.js';
 
-const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...o });
-function add(g, geo, mat, pos, rot = [0, 0, 0], shadow = { cast: false, receive: true }) {
+export const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...o });
+export function add(g, geo, mat, pos, rot = [0, 0, 0], shadow = { cast: false, receive: true }) {
   const m = new THREE.Mesh(geo, mat); m.position.set(...pos); m.rotation.set(...rot);
   m.castShadow = shadow.cast; m.receiveShadow = shadow.receive; g.add(m); return m;
 }
@@ -12,6 +13,8 @@ function add(g, geo, mat, pos, rot = [0, 0, 0], shadow = { cast: false, receive:
 export function buildArena(id, scene, quality, area = 0) {
   let a;
   if (id === 'catedral') a = area ? cripta(scene, quality) : catedral(scene, quality);
+  else if (id === 'templo') a = area ? cemiterio(scene, quality) : templo(scene, quality);
+  else if (id === 'forja') a = area ? coracao(scene, quality) : forja(scene, quality);
   else a = area ? fosso(scene, quality) : coliseu(scene, quality);
   a.area = area;
   return a;
@@ -176,7 +179,7 @@ function catedral(scene, quality) {
     onEvent: (e) => { if (e.type === 'hazard') vents.erupt(e.side); }, sync: (st) => statues.sync(st) };
 }
 
-function setupShadow(l) {
+export function setupShadow(l) {
   l.shadow.mapSize.set(1024, 1024);
   const c = l.shadow.camera; c.left = -10; c.right = 10; c.top = 8; c.bottom = -4; c.near = 1; c.far = 30;
   l.shadow.bias = -0.0008;
@@ -184,7 +187,7 @@ function setupShadow(l) {
 
 // ------------------------------------------------------------------ elementos interativos de borda
 // Corrente do Muro (Coliseu/Fosso): poste com corrente pendurada em cada borda; balança ao ser usada.
-function edgeChains(g, updaters, postMat) {
+export function edgeChains(g, updaters, postMat) {
   const iron = std(0x3a3a40, { metalness: 0.85, roughness: 0.35 });
   const linkGeo = new THREE.TorusGeometry(0.075, 0.022, 5, 10);
   const swings = {};
@@ -211,7 +214,7 @@ function edgeChains(g, updaters, postMat) {
 }
 
 // Perigo de borda: poço de lava (Coliseu) ou braseiro (Catedral). Entra em erupção no evento 'hazard'.
-function edgeVents(g, updaters, kind) {
+export function edgeVents(g, updaters, kind) {
   const lava = kind === 'lava';
   const tex = lavaTexture();
   const mat = new THREE.MeshBasicMaterial({ map: tex, color: lava ? 0xffffff : 0xffb070 });
@@ -252,7 +255,8 @@ function edgeStatues(g, updaters, baseMat, stoneMat) {
   const statues = {};
   const THETA = 1.72;
   for (const side of [-1, 1]) {
-    const x = side * 8.4, z = -0.55;
+    // v0.4: plano de queda recuado (z −1,4) — a estátua tomba atrás dos lutadores e não atravessa mais quem a empurrou
+    const x = side * 8.4, z = -1.4;
     add(g, new THREE.BoxGeometry(1.3, 0.8, 1.3), baseMat, [x, 0.4, z], [0, 0, 0], { cast: true, receive: true });
     const pivot = new THREE.Group(); pivot.position.set(x - side * 0.55, 0.8, z); g.add(pivot);
     const fig = new THREE.Group(); fig.position.x = side * 0.55; pivot.add(fig);
@@ -425,4 +429,4 @@ function cripta(scene, quality) {
     onEvent: (e) => { if (e.type === 'hazard') vents.erupt(e.side); }, sync: (st) => statues.sync(st) };
 }
 
-function mulberry(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+export function mulberry(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

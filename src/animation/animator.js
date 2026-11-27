@@ -63,6 +63,13 @@ export class Animator {
         case 'vault': {
           // v0.3: cambalhota suave — acelera/desacelera (smootherstep), encolhe no meio e estende para aterrissar
           const t = Math.min(1, f.sf / 38);
+          if (f.swing) {
+            // v0.4 Corrente da Forja: pendura-se na corrente (braços para cima) e solta o chute no meio do arco
+            if (t < 0.25) mix('jumpUp', 'castUp_s', t / 0.25);
+            else if (t < 0.75) mix('castUp_s', 'jkick_s', Math.min(1, (t - 0.25) / 0.2));
+            else mix('jkick_s', 'jumpDown', (t - 0.75) / 0.25);
+            speed = 16; break;
+          }
           flip = smoother(Math.min(1, t / 0.9)) * Math.PI * 2;
           if (t < 0.2) mix('jumpUp', 'tuck', t / 0.2);
           else if (t < 0.7) set('tuck');

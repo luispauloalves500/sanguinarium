@@ -124,7 +124,7 @@ export class Screens {
   setDiff(d) { this.diff = Math.max(0, Math.min(4, this.diff + d)); $('diffName').textContent = DIFFICULTIES[this.diff]; this.app.settings.difficulty = this.diff; this.app.saveSettings(); if (this.cur === 'select' && this.app.mode === 'arcade') this.renderPicks(); }
   // ---------------- arenas
   buildArenaList() {
-    const sw = { coliseu: 'linear-gradient(#3a0505, #8a2a10 60%, #4a2a1e)', catedral: 'linear-gradient(#0a0618, #3a2a5a 50%, #1d1a20)' };
+    const sw = { coliseu: 'linear-gradient(#3a0505, #8a2a10 60%, #4a2a1e)', catedral: 'linear-gradient(#0a0618, #3a2a5a 50%, #1d1a20)', templo: 'linear-gradient(#0b0610, #6a0c0c 45%, #2a1a12)', forja: 'linear-gradient(#0c0402, #b03a08 55%, #26211f)' };
     $('arenaList').innerHTML = Object.values(ARENAS).map((a, i) => `<div class="arena" data-i="${i}"><div class="sw" style="background:${sw[a.id]}"></div><h4>${a.name.toUpperCase()}</h4><p>${a.desc}</p></div>`).join('');
     $('arenaList').querySelectorAll('.arena').forEach((el) => el.addEventListener('click', () => { const i = +el.dataset.i; if (i === this.arenaSel) this.goFight(); else { this.arenaSel = i; this.renderArenas(); } }));
   }

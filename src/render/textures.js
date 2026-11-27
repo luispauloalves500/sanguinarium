@@ -98,3 +98,32 @@ export function pentagramTexture() {
     g.stroke();
   });
 }
+// v0.4: tábuas de madeira escura (Templo) e chapas de ferro rebitadas (Forja)
+export function woodTexture() {
+  const t = canvas(512, 512, (g, w, h) => {
+    g.fillStyle = '#2a1a12'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 64) {
+      g.fillStyle = ['#2e1d14', '#26170f', '#331f15', '#22140d'][(y / 64) % 4]; g.fillRect(0, y, w, 62);
+      g.globalAlpha = 0.25; g.strokeStyle = '#140a06'; g.lineWidth = 1.5;
+      for (let k = 0; k < 7; k++) { g.beginPath(); const yy = y + 6 + k * 8 + Math.random() * 4; g.moveTo(0, yy); g.bezierCurveTo(w * 0.3, yy + 5, w * 0.6, yy - 5, w, yy + 2); g.stroke(); }
+      g.globalAlpha = 1; g.fillStyle = '#0c0604'; g.fillRect(0, y + 62, w, 2);
+      for (let x = ((y / 64) % 2) * 170; x < w; x += 340) g.fillRect(x, y, 2, 62);
+    }
+    noise(g, w, h, 70, ['#3a0606', '#4a0808'], 6, 26, 0.3);
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 3);
+  return t;
+}
+export function ironTexture() {
+  const t = canvas(512, 512, (g, w, h) => {
+    g.fillStyle = '#26211f'; g.fillRect(0, 0, w, h);
+    noise(g, w, h, 1600, ['#332b28', '#1a1614', '#3d2a20', '#4a2a14'], 1, 5, 0.5);
+    g.strokeStyle = '#0d0a09'; g.lineWidth = 5;
+    for (let i = 0; i <= w; i += 128) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); }
+    g.fillStyle = '#4a403a';
+    for (let y = 12; y < h; y += 128) for (let x = 12; x < w; x += 128) for (const [dx, dy] of [[0, 0], [104, 0], [0, 104], [104, 104]]) { g.beginPath(); g.arc(x + dx, y + dy, 4, 0, Math.PI * 2); g.fill(); }
+    noise(g, w, h, 40, ['#ff5010', '#a02000'], 2, 10, 0.18);
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 4);
+  return t;
+}

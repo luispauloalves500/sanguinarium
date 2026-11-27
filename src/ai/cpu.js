@@ -129,7 +129,7 @@ export class CpuController {
     if (r() < this.p('idle')) { this.hold = 0; return; }
     // elementos da arena quando encurralado (Corrente do Muro / Estátua do Carrasco)
     const it = this.d >= 1 ? interactionFor(match.stage, me) : null;
-    if (it && ((it.kind === 'vault' && dist < 2.4) || (it.kind === 'statue' && dist < 3.2 && !op.blocking)) && r() < 0.3) { this.push(BTN.up | BTN.grab, 2); this.push(0, 8); return; }
+    if (it && ((it.kind === 'vault' && dist < 2.4) || (it.kind === 'statue' && dist < 3.2 && !op.blocking) || (it.kind === 'swing' && dist < 2.8 && !op.blocking) || (it.kind === 'spirit' && dist > 1.6 && !op.blocking)) && r() < 0.3) { this.push(BTN.up | BTN.grab, 2); this.push(0, 8); return; }
     // supergolpe
     if (me.meter >= 200 && dist < (me.ch.superRange || 2.4) && r() < 0.35) { const alt = r() < 0.5; if (alt) this.push(BTN.down, 2); this.push(BTN.lk | BTN.hk | (alt ? BTN.down : 0), 1); this.push(0, 3); return; }
     // fúria

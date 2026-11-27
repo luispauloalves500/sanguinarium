@@ -108,17 +108,20 @@ export class AudioSystem {
     const out = c.createGain(); out.gain.value = 0; out.connect(this.music);
     out.gain.linearRampToValueAtTime(0.9, c.currentTime + 2);
     const nodes = [];
-    const base = theme === 'catedral' ? 49 : 41.2;
+    // v0.4: Templo (escala japonesa in, flauta de sinos espaçada) e Forja (mais grave, batida de martelo)
+    const TH = { catedral: [49, 900, 70, [0, 3, 7, 8, 12, 15]], templo: [46.25, 1100, 62, [0, 1, 5, 7, 8, 12]], forja: [36.7, 420, 108, [0, 1, 3, 6, 7, 10]] };
+    const th = TH[theme] || [41.2, 500, 96, [0, 1, 5, 7, 8, 12]];
+    const base = th[0];
     for (const [mul, type, g] of [[1, 'sawtooth', 0.08], [1.5, 'sine', 0.06], [2.01, 'sawtooth', 0.03]]) {
       const o = c.createOscillator(); o.type = type; o.frequency.value = base * mul;
-      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = theme === 'catedral' ? 900 : 500;
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = th[1];
       const lfo = c.createOscillator(); lfo.frequency.value = 0.07 * mul; const lg = c.createGain(); lg.gain.value = 200; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
       const gg = c.createGain(); gg.gain.value = g;
       o.connect(f); f.connect(gg); gg.connect(out); o.start(); nodes.push(o, lfo);
     }
     let step = 0;
-    const bpm = theme === 'catedral' ? 70 : 96, spb = 60 / bpm / 2;
-    const scale = theme === 'catedral' ? [0, 3, 7, 8, 12, 15] : [0, 1, 5, 7, 8, 12];
+    const bpm = th[2], spb = 60 / bpm / 2;
+    const scale = th[3];
     let next = c.currentTime + 0.5;
     const tick = () => {
       if (!this.musicTimer) return;
@@ -126,8 +129,9 @@ export class AudioSystem {
         const s = step % 16;
         if (s === 0 || s === 6 || s === 10) this.drum(next, out, 1);
         if (s === 4 || s === 12) this.drum(next, out, 0.5, 180);
-        if (theme === 'catedral' && s % 8 === 0) this.bell(next, out, base * 4 * Math.pow(2, scale[(step / 8 | 0) % scale.length] / 12));
-        if (theme !== 'catedral' && s % 4 === 2 && Math.random() < 0.5) this.bell(next, out, base * 8 * Math.pow(2, scale[(Math.random() * scale.length) | 0] / 12), 0.03);
+        if ((theme === 'catedral' || (theme === 'templo' && s % 16 === 0)) && s % 8 === 0) this.bell(next, out, base * 4 * Math.pow(2, scale[(step / 8 | 0) % scale.length] / 12));
+        if (theme === 'forja' && (s === 2 || s === 8)) this.drum(next, out, 0.7, 320);
+        if (theme !== 'catedral' && theme !== 'forja' && s % 4 === 2 && Math.random() < 0.5) this.bell(next, out, base * 8 * Math.pow(2, scale[(Math.random() * scale.length) | 0] / 12), 0.03);
         next += spb; step++;
       }
     };

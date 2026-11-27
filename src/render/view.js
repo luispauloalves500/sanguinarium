@@ -165,18 +165,26 @@ export class GameView {
         // ---- arenas interativas
         case 'interact':
           if (e.kind === 'vault') { A.play('chain'); A.play('jump'); this.hud.message('CORRENTE DO MURO', 'small', 40); }
+          else if (e.kind === 'swing') { A.play('chain'); A.play('heavyWhoosh'); this.hud.message('CORRENTE DA FORJA!', 'small', 45); }
+          else if (e.kind === 'spirit') { A.play('teleport'); B.aura(e.x, 1.2, -0.6, 50, 0x6a9cff, 1.4, 0.04); this.hud.message('ESPÍRITO ANCESTRAL!', 'small', 50); }
           else { A.play('heavyWhoosh'); this.hud.message('ESTÁTUA DO CARRASCO!', 'small', 50); }
           break;
         case 'statueDown': {
           cam.shake(0.45); A.play('land', { heavy: true }); A.play('explosion');
           const x0 = e.side * 7.5;
-          for (let i = 0; i < 6; i++) B.spark(x0 - e.side * (0.5 + i * 0.55), 0.15, 0, 10, 0xb0a8b8, 1.1);
+          for (let i = 0; i < 6; i++) B.spark(x0 - e.side * (0.5 + i * 0.55), 0.15, -1.4, 10, 0xb0a8b8, 1.1);
           break;
         }
         case 'hazard':
           cam.shake(0.35); A.play('explosion'); A.play('gore');
-          B.spark(e.x, 0.6, 0.35, 40, e.kind === 'lava' ? 0xff7020 : 0xffa040, 2.2);
-          B.aura(e.x - e.side * 0.6, 1.0, 0.2, 30, 0xff5010, 1.6, 0.05);
+          if (e.kind === 'shatter') {
+            // Estátua do Guardião: estilhaços de pedra e o espírito do guardião se dispersa
+            for (let i = 0; i < 5; i++) B.spark(e.x - e.side * (0.8 + i * 0.1), 0.4 + i * 0.4, -0.1, 14, 0xa8a4b0, 1.6);
+            B.aura(e.x - e.side * 0.9, 1.2, -0.1, 40, 0x6a9cff, 1.6, 0.05);
+          } else {
+            B.spark(e.x, 0.6, 0.35, 40, e.kind === 'lava' ? 0xff7020 : 0xffa040, 2.2);
+            B.aura(e.x - e.side * 0.6, 1.0, 0.2, 30, 0xff5010, 1.6, 0.05);
+          }
           this.hud.message(e.name.toUpperCase() + '!', 'big', 60);
           break;
         case 'transition':
@@ -230,7 +238,7 @@ export class GameView {
       if (tr.f >= 38 && this._transFx !== match.frame - tr.f) {
         // vítima atravessa o portão/piso: estilhaços e sangue
         this._transFx = match.frame - tr.f;
-        for (let i = 0; i < 4; i++) this.blood.spark(d.x + tr.side * 0.3, 0.4 + i * 0.45, 0.2, 18, match.opts.arena === 'catedral' ? 0x9890a0 : 0x8a5a40, 1.8);
+        for (let i = 0; i < 4; i++) this.blood.spark(d.x + tr.side * 0.3, 0.4 + i * 0.45, 0.2, 18, ({ catedral: 0x9890a0, templo: 0x7a6a5a, forja: 0xff7a30 })[match.opts.arena] || 0x8a5a40, 1.8);
         this.blood.burst(d.x, 1.0, 0.1, tr.side, 70, 1.4);
         this.cam.shake(0.7); this.audio.play('explosion'); this.audio.play('land', { heavy: true });
       }
@@ -382,6 +390,17 @@ export class GameView {
         for (let i = 0; i < 6; i++) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.3, 5), mat); c.position.set((i - 2.5) * 0.18, 0.65, (Math.random() - 0.5) * 0.3); c.rotation.z = (i - 2.5) * 0.12; g.add(c); }
         break;
       }
+      case 'spirit': {
+        // v0.4: Espírito Ancestral do Templo — samurai fantasma azul-pálido (reaproveita o modelo placeholder do Kazuro)
+        const ghost = buildFighter('kazuro', true);
+        const gm = new THREE.MeshBasicMaterial({ color: 0x7aa8ff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
+        ghost.root.traverse((o) => { if (o.isMesh) { o.material = gm; o.castShadow = false; } });
+        applyPose(ghost, POSES.dashSlash_s || POSES.katana_s, {});
+        ghost.root.rotation.y = p.facing > 0 ? Math.PI / 2 : -Math.PI / 2;
+        g.add(ghost.root);
+        const s = new THREE.Sprite(glowMat('#5a8cff')); s.scale.set(1.6, 2.6, 1); s.position.y = 1.0; g.add(s);
+        break;
+      }
       case 'clone': {
         const ghost = buildFighter(match.fighters[p.owner].charId, false);
         const och = match.fighters[p.owner].ch;
@@ -413,6 +432,7 @@ export class GameView {
         o.visible = p.delay <= 0; o.position.y = p.y + 0.5;
         const r = o.userData.ring; r.position.set(p.x, 0.03, 0); r.scale.setScalar(1 + Math.sin(this.time * 20) * 0.1);
       }
+      if (p.fx === 'spirit') { o.position.y = 0.05 + Math.sin(this.time * 6) * 0.05; if (Math.random() < 0.6) this.blood.aura(p.x - p.facing * 0.4, 1 + Math.random() * 0.6, 0, 1, 0x6a9cff, 0.25, 0.02); }
       if (p.fx === 'slash' && Math.random() < 0.7) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0x6090ff, 0.2, 0);
       if (p.fx === 'fireball') { o.rotation.y += dt * 6; o.rotation.x += dt * 4; o.userData.shell.scale.setScalar(1 + Math.sin(this.time * 25) * 0.12); if (Math.random() < 0.9) this.blood.aura(p.x - p.facing * 0.3, p.y, 0, 1, 0xff5010, 0.15, 0.02); }
       if (p.fx === 'quake') { o.position.y = 0; const k = p.delay > 0 ? 0.2 : Math.min(1, 0.4 + (10 - p.life) * 0.2); o.scale.set(1, k, 1); if (Math.random() < 0.6) this.blood.spark(p.x + (Math.random() - 0.5) * 3, 0.1, 0.2, 1, 0xff8040, 0.8); }
