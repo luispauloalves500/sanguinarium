@@ -12,11 +12,11 @@ const STD_CANCEL = ['special', 'super'];
 
 // ---------------- VARKHAN, O CARRASCO ----------------
 const varkhanMoves = {
-  lp: mv('lp', 'Golpe de Cabo', 19, [hit(6, 8, [0.25, 1.25, 1.15, 1.65], 35, 'high', { hs: 15, bs: 11 })],
+  lp: mv('lp', 'Golpe de Cabo', 17, [hit(5, 7, [0.25, 1.25, 1.2, 1.65], 37, 'high', { hs: 15, bs: 11 })],
     { cancel: ['lp2', 'hk', ...STD_CANCEL], anim: 'jab' }),
   lp2: mv('lp2', 'Golpe de Cabo (2)', 20, [hit(6, 8, [0.25, 1.2, 1.2, 1.65], 35, 'high', { hs: 16, bs: 11 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'jab2', chainOnly: true }),
-  hp: mv('hp', 'Machadada', 34, [hit(12, 15, [0.3, 0.8, 1.75, 1.8], 75, 'mid', { hs: 22, bs: 16, push: 0.11, heavy: true, slash: true })],
+  hp: mv('hp', 'Machadada', 33, [hit(11, 14, [0.3, 0.8, 1.8, 1.8], 80, 'mid', { hs: 22, bs: 16, push: 0.11, heavy: true, slash: true })],
     { cancel: STD_CANCEL, anim: 'axeSwing' }),
   lk: mv('lk', 'Chute de Bota', 23, [hit(8, 10, [0.25, 0.4, 1.25, 0.95], 40, 'mid', { hs: 16, bs: 11 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'kickMid' }),
@@ -145,7 +145,7 @@ const kazuroMoves = {
     { cancel: ['lp2', 'hp', 'lk', ...STD_CANCEL], anim: 'jab' }),
   lp2: mv('lp2', 'Golpe de Tsuka (2)', 16, [hit(4, 6, [0.25, 1.15, 1.1, 1.6], 23, 'high', { hs: 15, bs: 10 })],
     { cancel: ['hp', ...STD_CANCEL], anim: 'jab2', chainOnly: true }),
-  hp: mv('hp', 'Corte Diagonal', 29, [hit(9, 11, [0.3, 0.7, 1.55, 1.9], 54, 'mid', { hs: 19, bs: 13, push: 0.1, slash: true })],
+  hp: mv('hp', 'Corte Diagonal', 30, [hit(9, 11, [0.3, 0.7, 1.5, 1.9], 50, 'mid', { hs: 19, bs: 13, push: 0.1, slash: true })],
     { cancel: ['hk', ...STD_CANCEL], anim: 'katana' }),
   lk: mv('lk', 'Chute Rápido', 17, [hit(5, 7, [0.25, 0.4, 1.2, 0.95], 30, 'mid', { hs: 14, bs: 10 })],
     { cancel: ['lk2', 'hp', ...STD_CANCEL], anim: 'kickMid' }),
@@ -169,8 +169,8 @@ const kazuroMoves = {
   // ---- especiais
   corte_espectral: mv('corte_espectral', 'Corte Espectral', 30, [], { kind: 'special', anim: 'katana', spawn: [{ f: 10, proj: 'slash' }] }),
   investida: mv('investida', 'Investida Relâmpago', 38, [hit(9, 15, [0.1, 0.6, 1.4, 1.75], 66, 'mid', { hs: 22, bs: 12, push: 0.12, heavy: true, slash: true })],
-    { kind: 'special', anim: 'dashSlash', vel: [{ f0: 5, f1: 15, vx: 0.34 }], invuln: [5, 9] }),
-  iaijutsu: mv('iaijutsu', 'Iaijutsu do Vazio', 44, [hit(14, 16, [0.3, 0.6, 2.3, 1.8], 85, 'mid', { kd: true, launch: 0.06, hs: 30, bs: 18, push: 0.12, heavy: true, slash: true, hitstop: 12 })],
+    { kind: 'special', anim: 'dashSlash', vel: [{ f0: 5, f1: 15, vx: 0.34 }], invuln: [6, 8] }),
+  iaijutsu: mv('iaijutsu', 'Iaijutsu do Vazio', 44, [hit(14, 16, [0.3, 0.6, 2.3, 1.8], 80, 'mid', { kd: true, launch: 0.06, hs: 30, bs: 18, push: 0.12, heavy: true, slash: true, hitstop: 12 })],
     { kind: 'special', anim: 'iai' }),
   reflexo: mv('reflexo', 'Lâmina Reflexa', 40, [], { kind: 'special', anim: 'guard', counterStance: [3, 24], counterMove: 'reflexo_contra' }),
   reflexo_contra: mv('reflexo_contra', 'Lâmina Reflexa (contra)', 30, [hit(4, 8, [0.0, 0.5, 1.6, 1.9], 95, 'unblockable', { kd: true, launch: 0.12, hs: 30, push: 0.1, heavy: true, slash: true, hitstop: 12 })],
@@ -233,7 +233,7 @@ const brakkorMoves = {
   bola_fogo: mv('bola_fogo', 'Bola de Fogo Infernal', 42, [], { kind: 'special', anim: 'cast', spawn: [{ f: 17, proj: 'fireball' }] }),
   investida_touro: mv('investida_touro', 'Investida do Touro', 48, [hit(10, 26, [0.2, 0.4, 1.4, 2.2], 76, 'mid', { kd: true, launch: 0.09, hs: 28, bs: 16, push: 0.16, heavy: true })],
     { kind: 'special', anim: 'charge', vel: [{ f0: 7, f1: 26, vx: 0.2 }], armor: [4, 24] }),
-  esmagamento: mv('esmagamento', 'Esmagamento', 40, [], { kind: 'special', anim: 'grab', cmdGrab: { f0: 7, f1: 9, range: 1.35, dmg: 125, slam: true } }),
+  esmagamento: mv('esmagamento', 'Esmagamento', 40, [], { kind: 'special', anim: 'grab', cmdGrab: { f0: 7, f1: 9, range: 1.45, dmg: 125, slam: true } }),
   sopro: mv('sopro', 'Sopro Infernal', 52, [
     hit(14, 16, [0.3, 1.1, 2.0, 2.0], 22, 'mid', { hs: 18, bs: 10, push: 0.02 }),
     hit(20, 22, [0.3, 1.0, 2.0, 2.0], 22, 'mid', { hs: 18, bs: 10, push: 0.02 }),
@@ -278,7 +278,7 @@ export const CHARACTERS = {
   varkhan: {
     id: 'varkhan', name: 'Varkhan', title: 'o Carrasco',
     bio: 'Morto-vivo com machado. Controle de média distância, força sobrenatural.',
-    height: 1.95, walkF: 0.05, walkB: 0.042, jumpVX: 0.065,
+    height: 1.95, walkF: 0.053, walkB: 0.044, jumpVX: 0.065,
     moves: varkhanMoves, projectiles: varkhanProj,
     specials: [
       { move: 'machado', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -346,7 +346,7 @@ export const CHARACTERS = {
   kazuro: {
     id: 'kazuro', name: 'Kazuro', title: 'o Samurai Amaldiçoado', proposalNames: true,
     bio: 'Espadachim veloz possuído por uma entidade demoníaca. Cortes espectrais, contra-ataques, investidas e duplicatas.',
-    height: 1.85, walkF: 0.058, walkB: 0.05, jumpVX: 0.072,
+    height: 1.85, walkF: 0.055, walkB: 0.048, jumpVX: 0.072,
     moves: kazuroMoves, projectiles: kazuroProj,
     specials: [
       { move: 'corte_espectral', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },
@@ -381,7 +381,7 @@ export const CHARACTERS = {
   brakkor: {
     id: 'brakkor', name: 'Brakkor', title: 'o Devorador', proposalNames: true,
     bio: 'Demônio gigante e lento que esmaga com agarrões, fogo infernal, terremotos e investidas que não se detêm.',
-    height: 2.35, width: 1.2, walkF: 0.038, walkB: 0.032, jumpVX: 0.055,
+    height: 2.35, width: 1.2, walkF: 0.041, walkB: 0.032, jumpVX: 0.055,
     moves: brakkorMoves, projectiles: brakkorProj,
     specials: [
       { move: 'bola_fogo', cmd: SPECIAL_CMDS.qcfP, simple: 'n' },

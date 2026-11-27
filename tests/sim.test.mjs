@@ -336,7 +336,7 @@ test('CPU vs CPU: 20 partidas completas terminam sem exceções, nas 5 dificulda
 
 test('frame data derivado disponível para lista de golpes', () => {
   const fd = moveFrameData(CHARACTERS.varkhan.moves.lp);
-  assert.equal(fd.startup, 7);
+  assert.equal(fd.startup, 6); // v0.4: Golpe de Cabo 1 quadro mais rápido
   assert.equal(typeof fd.advBlock, 'number');
 });
 
